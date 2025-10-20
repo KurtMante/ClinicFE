@@ -96,11 +96,6 @@ const StaffLoginModal = ({ isOpen, onClose, onNavigate }) => {
     }
   };
 
-  const handleRegister = () => {
-    onClose();
-    onNavigate('staffRegister');
-  };
-
   const handleForgotPassword = () => {
     alert('Forgot password functionality will be implemented soon.');
   };
@@ -173,9 +168,7 @@ const StaffLoginModal = ({ isOpen, onClose, onNavigate }) => {
               {isLoading ? 'LOGGING IN...' : 'STAFF LOGIN'}
             </button>
 
-            <button type="button" className="register-btn staff-register-btn" onClick={handleRegister}>
-              STAFF REGISTER
-            </button>
+            {/* Staff register button removed */}
           </form>
 
           <div className="modal-footer">
