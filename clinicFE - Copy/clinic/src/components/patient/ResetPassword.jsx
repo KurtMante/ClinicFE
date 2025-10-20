@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './Resetpassword.css';
+import './ResetPassword.css';
 
 // Token removed: direct (unsafe for production) password reset by email only.
 const ResetPassword = ({ onBack }) => {
