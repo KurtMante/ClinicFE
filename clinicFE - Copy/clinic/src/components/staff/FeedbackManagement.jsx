@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './FeedbackManagement.css';
 
 const FeedbackManagement = () => {
@@ -21,9 +21,38 @@ const FeedbackManagement = () => {
     fetchPatients();
   }, []);
 
+  // memoize to satisfy react-hooks/exhaustive-deps
+  const filterAndSortFeedbacks = useCallback(() => {
+    let filtered = feedbacks.filter(feedback => {
+      const patientName = getPatientName(feedback.patientId).toLowerCase();
+      const comment = feedback.comment.toLowerCase();
+      const search = searchTerm.toLowerCase();
+      
+      const matchesSearch = patientName.includes(search) || comment.includes(search);
+      const matchesRating = ratingFilter === 'All' || feedback.rating.toString() === ratingFilter;
+      const matchesAnonymous = anonymousFilter === 'All' || 
+        (anonymousFilter === 'Anonymous' && feedback.isAnonymous) ||
+        (anonymousFilter === 'Public' && !feedback.isAnonymous);
+      
+      return matchesSearch && matchesRating && matchesAnonymous;
+    });
+
+    // Sort feedbacks
+    if (sortBy === 'Date') {
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sortBy === 'Rating') {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === 'Patient') {
+      filtered.sort((a, b) => getPatientName(a.patientId).localeCompare(getPatientName(b.patientId)));
+    }
+    // Default keeps original order
+
+    setFilteredFeedbacks(filtered);
+  }, [feedbacks, patients, searchTerm, sortBy, ratingFilter, anonymousFilter]);
+
   useEffect(() => {
     filterAndSortFeedbacks();
-  }, [feedbacks, patients, searchTerm, sortBy, ratingFilter, anonymousFilter]);
+  }, [filterAndSortFeedbacks]);
 
   const fetchFeedbacks = async () => {
     setIsLoading(true);
@@ -53,34 +82,6 @@ const FeedbackManagement = () => {
     } catch (error) {
       console.error('Error fetching patients:', error);
     }
-  };
-
-  const filterAndSortFeedbacks = () => {
-    let filtered = feedbacks.filter(feedback => {
-      const patientName = getPatientName(feedback.patientId).toLowerCase();
-      const comment = feedback.comment.toLowerCase();
-      const search = searchTerm.toLowerCase();
-      
-      const matchesSearch = patientName.includes(search) || comment.includes(search);
-      const matchesRating = ratingFilter === 'All' || feedback.rating.toString() === ratingFilter;
-      const matchesAnonymous = anonymousFilter === 'All' || 
-        (anonymousFilter === 'Anonymous' && feedback.isAnonymous) ||
-        (anonymousFilter === 'Public' && !feedback.isAnonymous);
-      
-      return matchesSearch && matchesRating && matchesAnonymous;
-    });
-
-    // Sort feedbacks
-    if (sortBy === 'Date') {
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    } else if (sortBy === 'Rating') {
-      filtered.sort((a, b) => b.rating - a.rating);
-    } else if (sortBy === 'Patient') {
-      filtered.sort((a, b) => getPatientName(a.patientId).localeCompare(getPatientName(b.patientId)));
-    }
-    // Default keeps original order
-
-    setFilteredFeedbacks(filtered);
   };
 
   const getPatientName = (patientId) => {
