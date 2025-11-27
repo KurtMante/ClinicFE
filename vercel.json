@@ -6,7 +6,8 @@
       "src": "clinicFE - Copy/clinic/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
+        "installCommand": "cd \"clinicFE - Copy/clinic\" && npm install",
+        "buildCommand": "cd \"clinicFE - Copy/clinic\" && npm run build",
         "outputDirectory": "clinicFE - Copy/clinic/build"
       }
     }
