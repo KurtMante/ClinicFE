@@ -2,17 +2,21 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/index.jsx",
+      "src": "clinic/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build"
+        "buildCommand": "npm run build",
+        "outputDirectory": "clinic/build"
       }
     }
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "clinic/build/index.html"
     }
   ]
 }
