@@ -265,13 +265,19 @@ const LoginModal = ({ isOpen, onClose, onNavigate, onOpenStaffLogin, onOpenAdmin
                   </button>
                 </div>
 
-                <button type="submit" disabled={isLoading} className="login-btn">
-                  {isLoading ? 'LOGGING IN...' : 'LOGIN'}
-                </button>
-
-                <button type="button" className="register-btn" onClick={handleRegister}>
-                  REGISTER
-                </button>
+                <div className="form-actions">
+                  <button type="submit" disabled={isLoading} className="login-btn">
+                    {isLoading ? 'LOGGING IN...' : 'LOGIN'}
+                  </button>
+                  <button
+                    type="button"
+                    className="register-btn"
+                    onClick={handleRegister}
+                    disabled={isLoading}
+                  >
+                    REGISTER
+                  </button>
+                </div>
               </form>
             )}
 

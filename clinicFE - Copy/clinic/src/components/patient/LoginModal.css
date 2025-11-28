@@ -312,6 +312,49 @@
   color: #333 !important;
 }
 
+.login-modal .form-actions {
+  display: flex;
+  flex-direction: column; /* stack vertically */
+  gap: 12px;
+  width: 100%;
+}
+
+.login-modal .form-actions .login-btn,
+.login-modal .form-actions .register-btn {
+  width: 100%;
+  height: 52px;
+  border-radius: 26px;
+  margin: 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-sizing: border-box;       /* include border in width */
+  border: 2px solid transparent;/* same border thickness for both */
+}
+
+.login-modal .form-actions .login-btn {
+  background: #ffffff;
+  color: #142027;
+  border-color: #ffffff;        /* keep sizes equal to REGISTER */
+}
+
+.login-modal .form-actions .register-btn {
+  background: #214f32;          /* your green */
+  color: #eaf5ee;
+  border-color: #214f32;
+}
+
+/* Optional: hover */
+.login-modal .form-actions .login-btn:hover {
+  filter: brightness(0.98);
+}
+.login-modal .form-actions .register-btn:hover {
+  filter: brightness(1.05);
+}
+
 @media (max-width: 480px) {
   .login-modal {
     width: 95%;
