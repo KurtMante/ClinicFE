@@ -61,11 +61,11 @@ const MessagesReminders = () => {
     }
   };
 
-  // Utility to combine date and time to "YYYY-MM-DD HH:mm:ss"
+  // Utility to combine date and time to ISO "YYYY-MM-DDTHH:mm:ss"
   const combineDateTime = (date, time) => {
     if (!date || !time) return '';
     const timeString = time.length === 5 ? `${time}:00` : time; // pad seconds if needed
-    return `${date} ${timeString}`;
+    return `${date}T${timeString}`;
   };
 
   const filterReminders = () => {
@@ -110,6 +110,9 @@ const MessagesReminders = () => {
       patientId: newReminder.patientId,
       reminderType: newReminder.reminderType,
       preferredDateTime: combineDateTime(newReminder.reminderDate, newReminder.reminderTime),
+      // include normalized fields if the API expects them
+      reminderDate: newReminder.reminderDate,
+      reminderTime: newReminder.reminderTime,
       message: newReminder.message,
       isRead: false
     };
@@ -141,7 +144,7 @@ const MessagesReminders = () => {
   const handleMarkAsRead = async (reminderId) => {
     try {
       const response = await fetch(`http://localhost:3000/api/reminders/${reminderId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -152,11 +155,11 @@ const MessagesReminders = () => {
         setMessage('Reminder marked as read');
         fetchReminders();
       } else {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         setMessage(data.error || 'Failed to update reminder');
       }
     } catch (error) {
-      
+      setMessage('Network error while updating reminder.');
       console.error('Error:', error);
     }
   };
