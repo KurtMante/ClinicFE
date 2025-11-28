@@ -115,13 +115,23 @@ const ResetPassword = ({ onBack }) => {
             />
           </div>
 
-          <button
-            type="submit"
-            className="rp-btn-primary"
-            disabled={loading || !email}
-          >
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
+          <div className="rp-actions">
+            <button
+              type="submit"
+              className="rp-btn rp-btn-primary"
+              disabled={loading || !email}
+            >
+              {loading ? 'Sending…' : 'Send Reset Link'}
+            </button>
+            <button
+              type="button"
+              className="rp-btn rp-btn-secondary"
+              onClick={onBack}
+              disabled={loading}
+            >
+              Back to Login
+            </button>
+          </div>
         </form>
 
         <button
