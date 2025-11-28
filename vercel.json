@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "framework": "create-react-app",
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
+  "buildCommand": "cd \"clinicFE - Copy/clinic\" && npm run build",
+  "installCommand": "cd \"clinicFE - Copy/clinic\" && npm ci || npm install",
+  "outputDirectory": "clinicFE - Copy/clinic/build",
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
