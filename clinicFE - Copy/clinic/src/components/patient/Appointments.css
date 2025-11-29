@@ -252,16 +252,12 @@
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(5px);
+  z-index: 1000;
 }
 
 .edit-modal {
@@ -272,6 +268,62 @@
   position: relative;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   animation: modalFadeIn 0.3s ease-out;
+  z-index: 1001;
+}
+
+.note-modal {
+  background: #fff;
+  width: 380px;
+  max-width: 90%;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  padding: 18px 20px 24px;
+  position: relative;
+  animation: fadeIn 0.15s ease;
+  z-index: 1001;
+}
+
+.note-popup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 320px;
+  max-width: 90%;
+  background: #ffffff;
+  border: 1px solid #d8e2ee;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  padding: 12px 14px 16px;
+  z-index: 1100;
+  animation: popupFade 0.18s ease;
+  font-size: 14px;
+}
+
+.note-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.note-popup-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+}
+
+.note-popup-close:hover {
+  color: #000;
+}
+
+.note-popup-body {
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
 }
 
 @keyframes modalFadeIn {
@@ -282,6 +334,28 @@
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -415,6 +489,109 @@
   color: #333 !important;
 }
 
+.inline-note-btn {
+  margin-left: 6px;
+  background: none;
+  border: none;
+  color: #0b6efd;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.inline-note-btn:hover {
+  color: #094c9e;
+}
+
+.note-modal {
+  background: #fff;
+  width: 380px;
+  max-width: 90%;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  padding: 18px 20px 24px;
+  position: relative;
+  animation: fadeIn 0.15s ease;
+  z-index: 1001;
+}
+
+.note-popup {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 320px;
+  max-width: 90%;
+  background: #ffffff;
+  border: 1px solid #d8e2ee;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  padding: 12px 14px 16px;
+  z-index: 1100;
+  animation: popupFade 0.18s ease;
+  font-size: 14px;
+}
+
+.note-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.note-popup-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+}
+
+.note-popup-close:hover {
+  color: #000;
+}
+
+.note-popup-body {
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .appointments-container {
@@ -475,5 +652,10 @@
 
   .modal-actions {
     flex-direction: column;
+  }
+
+  .note-modal {
+    width: 90%;
+    padding: 16px;
   }
 }

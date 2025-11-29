@@ -14,6 +14,13 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   const [recentActivities, setRecentActivities] = useState([])
   const [services, setServices] = useState([])
 
+  // Doctor's Note viewer state
+  const [isNoteViewerOpen, setIsNoteViewerOpen] = useState(false)
+  const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [noteContent, setNoteContent] = useState(null)
+  const [noteLoading, setNoteLoading] = useState(false)
+  const [noteError, setNoteError] = useState(null)
+
   // Function to get section from URL hash
   const getSectionFromURL = () => {
     const hash = window.location.hash.replace("#", "")
@@ -94,16 +101,26 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
           .slice(0, 3)
 
         // Transform appointments into activity format
-        const activities = sortedAppointments.map((appointment) => ({
-          id: appointment.appointmentId,
-          type: `You booked ${getServiceName(appointment.serviceId)}`,
-          date: new Date(appointment.createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-          status: appointment.status || "Pending",
-        }))
+        const activities = sortedAppointments.map((appointment) => {
+          const dateISO =
+            appointment.appointmentDate ||
+            appointment.appointmentDateTime ||
+            appointment.date ||
+            appointment.scheduledAt ||
+            appointment.createdAt
+
+          return {
+            id: appointment.appointmentId,
+            type: `You booked ${getServiceName(appointment.serviceId)}`,
+            date: new Date(dateISO).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            dateISO,
+            status: appointment.status || "Pending",
+          }
+        })
 
         setRecentActivities(activities)
       }
@@ -132,6 +149,52 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
     window.location.hash = ""
     onLogout()
     onNavigate("home")
+  }
+
+  // Doctor's Note helpers
+  const openNoteViewer = (dateISO) => {
+    const d = dateISO ? new Date(dateISO) : new Date()
+    setNoteDate(d.toISOString().slice(0, 10))
+    setNoteContent(null)
+    setNoteError(null)
+    setIsNoteViewerOpen(true)
+  }
+
+  const closeNoteViewer = () => {
+    setIsNoteViewerOpen(false)
+  }
+
+  const fetchDoctorNote = async () => {
+    if (!patient) return
+    setNoteLoading(true)
+    setNoteError(null)
+    setNoteContent(null)
+    try {
+      const weekday = new Date(noteDate).getDay()
+
+      // Try plural path first, then fallback to singular if needed
+      let res = await fetch("http://localhost:3000/api/schedules")
+      if (!res.ok) {
+        res = await fetch("http://localhost:3000/api/schedule")
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      const data = await res.json()
+      const list = Array.isArray(data) ? data : data?.data || []
+
+      const getWeekday = (s) =>
+        Number(s?.weekday ?? s?.day_of_week ?? s?.day ?? s?.dow)
+
+      const sched = (list || []).find((s) => getWeekday(s) === Number(weekday))
+      const notes = sched?.notes
+
+      setNoteContent(notes && String(notes).trim() ? String(notes) : "No note found for this day.")
+    } catch (e) {
+      console.error("Error fetching doctor's note:", e)
+      setNoteError("Unable to load note. Please try again.")
+    } finally {
+      setNoteLoading(false)
+    }
   }
 
   if (!patient) {
@@ -305,7 +368,10 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
                               <p>{activity.type}</p>
                               <small>{activity.date}</small>
                             </div>
-                            <div className={`activity-status ${activity.status.toLowerCase()}`}>{activity.status}</div>
+                            <div className="activity-actions" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                              {/* Removed the View Note button per request */}
+                              <div className={`activity-status ${activity.status.toLowerCase()}`}>{activity.status}</div>
+                            </div>
                           </div>
                         ))
                       )}
@@ -337,6 +403,11 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
                       <button className="action-btn action-btn-outline" onClick={() => handleSectionChange("settings")}>
                         <span>👤</span>
                         Edit Profile
+                      </button>
+                      {/* New: Open Doctor's Note viewer for a specific day */}
+                      <button className="action-btn action-btn-outline" onClick={() => openNoteViewer()}>
+                        <span>📝</span>
+                        Doctor's Note
                       </button>
                     </div>
                   </div>
@@ -420,6 +491,70 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
           {activeSection === "settings" && <Profile patient={patient} />}
 
           {activeSection === "reminders" && <Reminders patient={patient} />}
+
+          {/* Doctor's Note Modal */}
+          {isNoteViewerOpen && (
+            <div
+              className="modal-backdrop"
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1000,
+              }}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className="dashboard-card"
+                style={{ width: "min(720px, 92vw)", maxHeight: "85vh", overflow: "auto" }}
+              >
+                <div className="card-header">
+                  <h3 className="card-title">
+                    <span>📝</span>
+                    Doctor's Note
+                  </h3>
+                </div>
+                <div className="card-content">
+                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
+                    <label htmlFor="noteDate"><strong>Select date:</strong></label>
+                    <input
+                      id="noteDate"
+                      type="date"
+                      value={noteDate}
+                      onChange={(e) => setNoteDate(e.target.value)}
+                    />
+                    <button className="action-btn action-btn-primary" onClick={fetchDoctorNote} disabled={noteLoading}>
+                      {noteLoading ? "Loading..." : "View Note"}
+                    </button>
+                    <button className="action-btn action-btn-outline" onClick={closeNoteViewer}>Close</button>
+                  </div>
+
+                  {noteError && (
+                    <div style={{ color: "#b00020", marginBottom: "0.75rem" }}>{noteError}</div>
+                  )}
+
+                  {noteContent && (
+                    <div
+                      className="note-body"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        background: "#fafafa",
+                        border: "1px solid #eee",
+                        borderRadius: "8px",
+                        padding: "1rem",
+                      }}
+                    >
+                      {noteContent}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>

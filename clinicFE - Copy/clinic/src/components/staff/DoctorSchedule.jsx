@@ -1,49 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DoctorSchedule.css';
 
-const DoctorSchedule = () => {
-  const [scheduleData, setScheduleData] = useState([
-    {
-      day: 'Monday',
-      time: '8:00 AM - 5:00 PM',
-      status: 'Available'
-    },
-    {
-      day: 'Tuesday',
-      time: '8:00 AM - 5:00 PM',
-      status: 'Available'
-    },
-    {
-      day: 'Wednesday',
-      time: '8:00 AM - 5:00 PM',
-      status: 'Available'
-    },
-    {
-      day: 'Thursday',
-      time: '8:00 AM - 5:00 PM',
-      status: 'Available'
-    },
-    {
-      day: 'Friday',
-      time: '8:00 AM - 5:00 PM',
-      status: 'Available'
-    },
-    {
-      day: 'Saturday',
-      time: '8:00 AM - 12:00 PM',
-      status: 'Half-Day'
-    },
-    {
-      day: 'Sunday',
-      time: '',
-      status: 'Day-off'
-    }
-  ]);
+const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:3000') + '/api/schedule';
 
-  const [notes, setNotes] = useState([
-    'Doctor will be on leave April 25-26 (Medical Conference)',
-    'Saturday Schedule may change next month'
-  ]);
+const statusApiToUi = (s) => {
+  switch (s) {
+    case 'AVAILABLE': return 'Available';
+    case 'UNAVAILABLE': return 'Unavailable';
+    case 'HALF_DAY': return 'Half-Day';
+    case 'DAY_OFF': return 'Day-off';
+    default: return 'Available';
+  }
+};
+const statusUiToApi = (s) => {
+  switch (s) {
+    case 'Available': return 'AVAILABLE';
+    case 'Unavailable': return 'UNAVAILABLE';
+    case 'Half-Day': return 'HALF_DAY';
+    case 'Day-off': return 'DAY_OFF';
+    default: return 'AVAILABLE';
+  }
+};
+
+const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+const to12 = (t) => {
+  if (!t) return '';
+  const [H,M] = t.split(':');
+  if (M === undefined) return '';
+  let h = parseInt(H,10);
+  const ampm = h >= 12 ? 'PM':'AM';
+  h = h % 12 || 12;
+  return `${h}:${M} ${ampm}`;
+};
+
+const toApiTime = (v) => v ? `${v}:00` : null;
+
+const DoctorSchedule = () => {
+  const [scheduleData, setScheduleData] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -55,13 +52,84 @@ const DoctorSchedule = () => {
 
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [noteWeekday, setNoteWeekday] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const res = await fetch(API_BASE);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        console.log('Schedule API data:', data); // debug
+        const mapped = data.map(r => {
+          const start = r.start_time || r.startTime;
+          const end = r.end_time || r.endTime;
+          return {
+            weekday: r.weekday,
+            day: dayNames[r.weekday],
+            time: (r.status === 'DAY_OFF' || r.status === 'UNAVAILABLE' || !start || !end)
+              ? ''
+              : `${to12(start)} - ${to12(end)}`,
+            status: statusApiToUi(r.status),
+            raw: r,
+            notes: r.notes ? r.notes.split('\n') : []
+          };
+        });
+        setScheduleData(mapped);
+        setNotes(mapped.flatMap(d => d.notes));
+      } catch (e) {
+        setLoadError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const refreshOne = async () => {
+    try {
+      const res = await fetch(API_BASE);
+      if (!res.ok) throw new Error('Refresh failed');
+      const data = await res.json();
+      const mapped = data.map(r => {
+        const start = r.start_time || r.startTime;
+        const end = r.end_time || r.endTime;
+        return {
+          weekday: r.weekday,
+          day: dayNames[r.weekday],
+          time: (r.status === 'DAY_OFF' || r.status === 'UNAVAILABLE' || !start || !end)
+            ? ''
+            : `${to12(start)} - ${to12(end)}`,
+          status: statusApiToUi(r.status),
+          raw: r,
+          notes: r.notes ? r.notes.split('\n') : []
+        };
+      });
+      setScheduleData(mapped);
+      setNotes(mapped.flatMap(d => d.notes));
+    } catch (_) {}
+  };
 
   const handleEditSchedule = (index) => {
     const schedule = scheduleData[index];
     setSelectedDay({ ...schedule, index });
-    
-    if (schedule.time && schedule.time !== '') {
-      const [startTime, endTime] = schedule.time.split(' - ');
+
+    if (schedule.time && schedule.time !== '' && schedule.time.includes(' - ')) {
+      const [startTime, endTime] = schedule.time.split(' - ').map(s => s.trim());
+      const convertTo24Hour = (time12h) => {
+        if (!time12h) return '';
+        const parts = time12h.split(' ');
+        if (parts.length < 2) return '';
+        const [time, modifier] = parts;
+        let [hours, minutes] = time.split(':');
+        if (!hours || minutes === undefined) return '';
+        if (hours === '12') hours = '00';
+        if (modifier === 'PM') hours = (parseInt(hours,10) + 12).toString().padStart(2,'0');
+        return `${hours}:${minutes}`;
+      };
       setEditFormData({
         startTime: convertTo24Hour(startTime),
         endTime: convertTo24Hour(endTime),
@@ -74,76 +142,81 @@ const DoctorSchedule = () => {
         status: schedule.status
       });
     }
-    
     setIsEditModalOpen(true);
   };
 
-  const handleMarkUnavailable = (index) => {
-    const updatedSchedule = [...scheduleData];
-    updatedSchedule[index] = {
-      ...updatedSchedule[index],
-      status: updatedSchedule[index].status === 'Available' ? 'Unavailable' : 'Available'
-    };
-    setScheduleData(updatedSchedule);
-  };
-
-  const convertTo24Hour = (time12h) => {
-    const [time, modifier] = time12h.split(' ');
-    let [hours, minutes] = time.split(':');
-    if (hours === '12') {
-      hours = '00';
-    }
-    if (modifier === 'PM') {
-      hours = parseInt(hours, 10) + 12;
-    }
-    return `${hours}:${minutes}`;
-  };
-
-  const convertTo12Hour = (time24h) => {
-    let [hours, minutes] = time24h.split(':');
-    hours = parseInt(hours, 10);
-    const modifier = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes} ${modifier}`;
-  };
-
-  const handleSaveSchedule = () => {
-    if (editFormData.startTime && editFormData.endTime) {
-      const updatedSchedule = [...scheduleData];
-      const startTime12 = convertTo12Hour(editFormData.startTime);
-      const endTime12 = convertTo12Hour(editFormData.endTime);
-      
-      updatedSchedule[selectedDay.index] = {
-        ...updatedSchedule[selectedDay.index],
-        time: `${startTime12} - ${endTime12}`,
-        status: editFormData.status
+  const handleMarkUnavailable = async (index) => {
+    const item = scheduleData[index];
+    const nextStatus = item.status === 'Available' ? 'Unavailable' : 'Available';
+    setSaving(true);
+    try {
+      const body = {
+        status: statusUiToApi(nextStatus),
+        start_time: nextStatus === 'Available' ? '08:00:00' : null,
+        end_time: nextStatus === 'Available' ? '17:00:00' : null
       };
-      setScheduleData(updatedSchedule);
-    } else {
-      const updatedSchedule = [...scheduleData];
-      updatedSchedule[selectedDay.index] = {
-        ...updatedSchedule[selectedDay.index],
-        time: '',
-        status: editFormData.status
-      };
-      setScheduleData(updatedSchedule);
+      const res = await fetch(`${API_BASE}/${item.weekday}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Update failed');
+      await refreshOne(item.weekday);
+    } catch (e) {
+      // optionally set error state
+    } finally {
+      setSaving(false);
     }
-    
-    setIsEditModalOpen(false);
-    setSelectedDay(null);
   };
 
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      setNotes([...notes, newNote.trim()]);
+  const handleSaveSchedule = async () => {
+    if (!selectedDay) return;
+    const needsTime = !(editFormData.status === 'Day-off' || editFormData.status === 'Unavailable');
+    if (needsTime && (!editFormData.startTime || !editFormData.endTime)) {
+      // simple client validation
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        status: statusUiToApi(editFormData.status),
+        start_time: needsTime ? toApiTime(editFormData.startTime) : null,
+        end_time: needsTime ? toApiTime(editFormData.endTime) : null
+      };
+      const res = await fetch(`${API_BASE}/${selectedDay.weekday}`, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Save failed');
+      await refreshOne(selectedDay.weekday);
+    } catch (e) {
+      // handle error
+    } finally {
+      setSaving(false);
+      setIsEditModalOpen(false);
+      setSelectedDay(null);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/${noteWeekday}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ note: newNote.trim() })
+      });
+      if (!res.ok) throw new Error('Add note failed');
+      await refreshOne(noteWeekday);
       setNewNote('');
       setIsNotesModalOpen(false);
+    } catch (e) {
+      // handle
+    } finally {
+      setSaving(false);
     }
-  };
-
-  const handleDeleteNote = (index) => {
-    const updatedNotes = notes.filter((_, i) => i !== index);
-    setNotes(updatedNotes);
   };
 
   const getStatusColor = (status) => {
@@ -156,15 +229,54 @@ const DoctorSchedule = () => {
     }
   };
 
+  const statusQuickDefaults = {
+    AVAILABLE: { start_time: '08:00:00', end_time: '17:00:00' },
+    HALF_DAY: { start_time: '08:00:00', end_time: '12:00:00' }
+  };
+
+  const handleStatusSelect = async (index, uiValue) => {
+    const item = scheduleData[index];
+    setSaving(true);
+    try {
+      const apiStatus = statusUiToApi(uiValue);
+      const def = statusQuickDefaults[apiStatus];
+      const body = {
+        status: apiStatus,
+        start_time: def ? def.start_time : null,
+        end_time: def ? def.end_time : null
+      };
+      const res = await fetch(`${API_BASE}/${item.weekday}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Update failed');
+      await refreshOne();
+    } catch (_) {
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="doctor-schedule-container"><p>Loading schedule...</p></div>;
+  }
+  if (loadError) {
+    return <div className="doctor-schedule-container"><p>Error: {loadError}</p></div>;
+  }
+
   return (
     <div className="doctor-schedule-container">
       <div className="schedule-header">
         <h1>Manage Doctor Schedule</h1>
-        <button 
+        <button
           className="add-notes-btn"
-          onClick={() => setIsNotesModalOpen(true)}
+          onClick={() => {
+            setNoteWeekday(0);
+            setIsNotesModalOpen(true);
+          }}
         >
-          Add Notes
+          Add Note
         </button>
       </div>
 
@@ -185,23 +297,30 @@ const DoctorSchedule = () => {
                 <td>{schedule.time}</td>
                 <td>
                   <span className={`status-badge ${getStatusColor(schedule.status)}`}>
-                    {schedule.status}
+                    {saving && selectedDay?.index === index ? '...' : schedule.status}
                   </span>
                 </td>
                 <td>
                   <div className="action-buttons">
-                    <button 
+                    <button
                       className="action-link edit-link"
                       onClick={() => handleEditSchedule(index)}
+                      disabled={saving}
                     >
-                      Edit Schedule
+                      Edit
                     </button>
-                    <button 
-                      className="action-link unavailable-link"
-                      onClick={() => handleMarkUnavailable(index)}
+                    <select
+                      className="status-select"
+                      value={schedule.status}
+                      onChange={(e) => handleStatusSelect(index, e.target.value)}
+                      disabled={saving}
                     >
-                      Mark as {schedule.status === 'Available' ? 'Unavailable' : 'Available'}
-                    </button>
+                      <option value="Available">Available</option>
+                      <option value="Half-Day">Half-Day</option>
+                      <option value="Day-off">Day-off</option>
+                      <option value="Unavailable">Unavailable</option>
+                    </select>
+                    {/* Removed per-row Add Note button; use top Add Note */}
                   </div>
                 </td>
               </tr>
@@ -213,44 +332,34 @@ const DoctorSchedule = () => {
       <div className="notes-section">
         <h3>NOTES:</h3>
         <ul className="notes-list">
-          {notes.map((note, index) => (
-            <li key={index} className="note-item">
+          {notes.map((note, i) => (
+            <li key={i} className="note-item">
               <span className="note-bullet">●</span>
               <span className="note-text">{note}</span>
-              <button 
-                className="delete-note-btn"
-                onClick={() => handleDeleteNote(index)}
-                title="Delete note"
-              >
-                ×
-              </button>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Edit Schedule Modal */}
       {isEditModalOpen && selectedDay && (
         <div className="modal-overlay" onClick={() => setIsEditModalOpen(false)}>
           <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
-            <button 
-              className="modal-close" 
+            <button
+              className="modal-close"
               onClick={() => setIsEditModalOpen(false)}
             >
               ×
             </button>
-            
             <div className="modal-header">
               <h3>Edit Schedule - {selectedDay.day}</h3>
             </div>
-
             <div className="modal-body">
               <div className="form-group">
                 <label htmlFor="status">Status</label>
                 <select
                   id="status"
                   value={editFormData.status}
-                  onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                   className="form-control"
                 >
                   <option value="Available">Available</option>
@@ -260,7 +369,7 @@ const DoctorSchedule = () => {
                 </select>
               </div>
 
-              {editFormData.status !== 'Day-off' && (
+              {!(editFormData.status === 'Day-off' || editFormData.status === 'Unavailable') && (
                 <>
                   <div className="form-group">
                     <label htmlFor="startTime">Start Time</label>
@@ -268,18 +377,17 @@ const DoctorSchedule = () => {
                       type="time"
                       id="startTime"
                       value={editFormData.startTime}
-                      onChange={(e) => setEditFormData({...editFormData, startTime: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, startTime: e.target.value })}
                       className="form-control"
                     />
                   </div>
-
                   <div className="form-group">
                     <label htmlFor="endTime">End Time</label>
                     <input
                       type="time"
                       id="endTime"
                       value={editFormData.endTime}
-                      onChange={(e) => setEditFormData({...editFormData, endTime: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, endTime: e.target.value })}
                       className="form-control"
                     />
                   </div>
@@ -287,17 +395,19 @@ const DoctorSchedule = () => {
               )}
 
               <div className="modal-actions">
-                <button 
+                <button
                   className="btn btn-cancel"
                   onClick={() => setIsEditModalOpen(false)}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   className="btn btn-save"
                   onClick={handleSaveSchedule}
+                  disabled={saving}
                 >
-                  Save Changes
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -305,22 +415,32 @@ const DoctorSchedule = () => {
         </div>
       )}
 
-      {/* Add Notes Modal */}
       {isNotesModalOpen && (
         <div className="modal-overlay" onClick={() => setIsNotesModalOpen(false)}>
           <div className="notes-modal" onClick={(e) => e.stopPropagation()}>
-            <button 
-              className="modal-close" 
+            <button
+              className="modal-close"
               onClick={() => setIsNotesModalOpen(false)}
             >
               ×
             </button>
-            
             <div className="modal-header">
               <h3>Add Note</h3>
             </div>
-
             <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="noteDay">Day</label>
+                <select
+                  id="noteDay"
+                  value={noteWeekday}
+                  onChange={(e) => setNoteWeekday(Number(e.target.value))}
+                  className="form-control"
+                >
+                  {dayNames.map((d,i) => (
+                    <option key={i} value={i}>{d}</option>
+                  ))}
+                </select>
+              </div>
               <div className="form-group">
                 <label htmlFor="newNote">Note</label>
                 <textarea
@@ -332,20 +452,20 @@ const DoctorSchedule = () => {
                   rows="3"
                 />
               </div>
-
               <div className="modal-actions">
-                <button 
+                <button
                   className="btn btn-cancel"
                   onClick={() => setIsNotesModalOpen(false)}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   className="btn btn-save"
                   onClick={handleAddNote}
-                  disabled={!newNote.trim()}
+                  disabled={!newNote.trim() || saving}
                 >
-                  Add Note
+                  {saving ? 'Adding...' : 'Add Note'}
                 </button>
               </div>
             </div>

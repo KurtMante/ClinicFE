@@ -16,11 +16,15 @@ const Appointments = ({ patient }) => {
     preferredDateTime: '',
     symptom: ''
   });
+  const [schedules, setSchedules] = useState([]);
+  const [selectedDaySchedule, setSelectedDaySchedule] = useState(null);
+  const [availabilityMessage, setAvailabilityMessage] = useState('');
 
   useEffect(() => {
     if (patient) {
       fetchAppointments();
       fetchServices();
+      fetchSchedules();
     }
   }, [patient]);
 
@@ -74,6 +78,18 @@ const Appointments = ({ patient }) => {
     }
   };
 
+  const fetchSchedules = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/schedules');
+      if (res.ok) {
+        const data = await res.json();
+        setSchedules(data.map(s => ({ ...s, note: (s.notes ?? s.note ?? '').trim() })));
+      }
+    } catch (e) {
+      console.error('Error fetching schedules:', e);
+    }
+  };
+
   const getServiceName = (serviceId) => {
     const service = services.find(s => s.serviceId === serviceId);
     return service ? service.serviceName : 'Unknown Service';
@@ -84,6 +100,59 @@ const Appointments = ({ patient }) => {
     return service ? service.price : '0';
   };
 
+  // If backend uses Monday=0, Tuesday=1, ... Sunday=6, adjust JS getDay (Sunday=0) to that:
+  const mapJsDayToScheduleDay = (jsDay) => {
+    // Convert Sunday(0) -> 6, Monday(1) -> 0, ..., Saturday(6) -> 5
+    return (jsDay + 6) % 7;
+  };
+
+  const getWeekday = (dateTime) => new Date(dateTime).getDay(); // JS day
+  const getScheduleForDate = (dateTime) => {
+    if (!dateTime) return null;
+    const jsDay = new Date(dateTime).getDay(); // 0=Sun .. 6=Sat
+    // Backend uses Monday=0 .. Sunday=6
+    const backendWeekday = (jsDay + 6) % 7;
+    return schedules.find(s => Number(s.weekday) === backendWeekday) || null;
+  };
+
+  const isWithinTimeRange = (dateTime, sched) => {
+    if (!sched || !sched.start_time || !sched.end_time) return true;
+    const normalize = (t) => t.length >= 5 ? t.slice(0,5) : t; // trim seconds if present
+    const start = normalize(sched.start_time);
+    const end = normalize(sched.end_time);
+
+    const d = new Date(dateTime);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    const current = `${hh}:${mm}`;
+
+    return current >= start && current <= end;
+  };
+
+  // Add near top utility area
+const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
+
+  // Replace status extraction inside evaluateAvailability
+  const evaluateAvailability = (dateTime) => {
+    const sched = getScheduleForDate(dateTime);
+    if (!sched) return { available: true, msg: 'No schedule restriction.' };
+    const status = normalizeStatus(sched.status || '');
+    const start = sched.start_time ? sched.start_time.slice(0,5) : null;
+    const end = sched.end_time ? sched.end_time.slice(0,5) : null;
+    const notes = (sched.notes || sched.note || '').trim();
+
+    if (['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status)) {
+      return { available: false, msg: `Doctor unavailable (${sched.status}). ${notes}`.trim() };
+    }
+    if (['AVAILABLE','HALF_DAY'].includes(status)) {
+      if (start && end && !isWithinTimeRange(dateTime, sched)) {
+        return { available: false, msg: `Outside available time (${start} - ${end}). ${notes}`.trim() };
+      }
+      return { available: true, msg: `Available${start && end ? ` (${start} - ${end})` : ''}. ${notes}`.trim() };
+    }
+    return { available: true, msg: notes || 'Available.' };
+  };
+
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
     setEditFormData({
@@ -91,6 +160,10 @@ const Appointments = ({ patient }) => {
       symptom: appointment.symptom
     });
     setIsEditModalOpen(true);
+    const sched = getScheduleForDate(appointment.preferredDateTime);
+    setSelectedDaySchedule(sched);
+    const evalResult = evaluateAvailability(appointment.preferredDateTime);
+    setAvailabilityMessage(evalResult.msg);
   };
 
   const handleCancelAppointment = async (appointmentId) => {
@@ -117,6 +190,13 @@ const Appointments = ({ patient }) => {
   };
 
   const handleUpdateAppointment = async () => {
+    // availability validation
+    const evalResult = evaluateAvailability(editFormData.preferredDateTime);
+    if (!evalResult.available) {
+      setMessage(evalResult.msg);
+      return;
+    }
+
     if (!editFormData.preferredDateTime || !editFormData.symptom.trim()) {
       setMessage('Please fill in all required fields');
       return;
@@ -161,6 +241,12 @@ const Appointments = ({ patient }) => {
       ...prev,
       [name]: value
     }));
+    if (e.target.name === 'preferredDateTime') {
+      const sched = getScheduleForDate(e.target.value);
+      setSelectedDaySchedule(sched);
+      const evalResult = evaluateAvailability(e.target.value);
+      setAvailabilityMessage(evalResult.msg);
+    }
   };
 
   const getMinDateTime = () => {
@@ -193,6 +279,8 @@ const Appointments = ({ patient }) => {
   const getAttendanceColor = (isAttended) => {
     return isAttended === 1 ? 'status-attended' : 'status-not-attended';
   };
+
+  const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
   return (
     <div className="appointments-container">
@@ -253,13 +341,40 @@ const Appointments = ({ patient }) => {
                           <p><strong>Symptoms/Reason:</strong> {appointment.symptom}</p>
                           <p><strong>Appointment ID:</strong> #{appointment.appointmentId}</p>
                           <p><strong>Booked on:</strong> {formatDateTime(appointment.createdAt)}</p>
+                          {(() => {
+                            const sched = getScheduleForDate(appointment.preferredDateTime);
+                            const note = sched?.note || sched?.notes || '';
+                            if (!note.trim()) return null;
+                            const short = note.length > 40 ? note.slice(0,40) + '...' : note;
+                            return (
+                              <p className="doctor-note-line">
+                                <strong>Doctor Note:</strong> {short}
+                                <span className="note-badge" title={note}>📝</span>
+                              </p>
+                            );
+                          })()}
                         </div>
                       </div>
                       
                       <div className="appointment-actions">
-                        <button 
+                        <button
                           className="action-btn edit-btn"
                           onClick={() => handleEditAppointment(appointment)}
+                          disabled={(() => {
+                            const sched = getScheduleForDate(appointment.preferredDateTime);
+                            if (!sched) return false;
+                            const status = normalizeStatus(sched.status || '');
+                            return ['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status);
+                          })()}
+                          title={(() => {
+                            const sched = getScheduleForDate(appointment.preferredDateTime);
+                            if (!sched) return 'Reschedule';
+                            const status = normalizeStatus(sched.status || '');
+                            if (['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status)) {
+                              return `Doctor ${sched.status} - cannot reschedule this day`;
+                            }
+                            return 'Reschedule';
+                          })()}
                         >
                           Reschedule
                         </button>
@@ -305,6 +420,19 @@ const Appointments = ({ patient }) => {
                           <p><strong>Accepted Appointment ID:</strong> #{appointment.acceptedAppointmentId}</p>
                           <p><strong>Original Appointment ID:</strong> #{appointment.appointmentId}</p>
                           <p><strong>Accepted on:</strong> {formatDateTime(appointment.createdAt)}</p>
+                          {(() => {
+                            const sched = getScheduleForDate(appointment.preferredDateTime);
+                            const noteText = sched ? (sched.notes || sched.note || '') : '';
+                            if (sched && noteText.trim()) {
+                              const short = noteText.length > 40 ? noteText.slice(0,40) + '...' : noteText;
+                              return (
+                                <p>
+                                  <strong>Doctor Schedule Note:</strong> {short}
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -340,7 +468,20 @@ const Appointments = ({ patient }) => {
                   required
                 />
               </div>
-
+              {selectedDaySchedule && (
+                <div className="schedule-info">
+                  <p><strong>Schedule Status:</strong> {selectedDaySchedule.status}</p>
+                  {selectedDaySchedule.start_time && selectedDaySchedule.end_time && (
+                    <p><strong>Available Window:</strong> {selectedDaySchedule.start_time} - {selectedDaySchedule.end_time}</p>
+                  )}
+                  <p><strong>Note:</strong> {selectedDaySchedule.notes || 'None'}</p>
+                </div>
+              )}
+              {availabilityMessage && (
+                <div className="availability-message">
+                  {availabilityMessage}
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="editSymptom">Symptoms / Reason for Visit *</label>
                 <textarea
@@ -353,12 +494,15 @@ const Appointments = ({ patient }) => {
                   required
                 />
               </div>
-
               <div className="modal-actions">
                 <button className="action-btn cancel-btn" onClick={closeEditModal}>
                   Cancel
                 </button>
-                <button className="action-btn save-btn" onClick={handleUpdateAppointment}>
+                <button
+                  className="action-btn save-btn"
+                  onClick={handleUpdateAppointment}
+                  disabled={!evaluateAvailability(editFormData.preferredDateTime).available}
+                >
                   Update Appointment
                 </button>
               </div>
