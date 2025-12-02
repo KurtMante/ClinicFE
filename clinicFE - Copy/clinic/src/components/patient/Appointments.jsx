@@ -31,7 +31,6 @@ const Appointments = ({ patient }) => {
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      // Fetch both pending and accepted appointments
       const [pendingResponse, acceptedResponse] = await Promise.all([
         fetch(`http://localhost:3000/api/appointments/patient/${patient.patientId}`),
         fetch(`http://localhost:3000/api/accepted-appointments/patient/${patient.patientId}`)
@@ -48,10 +47,7 @@ const Appointments = ({ patient }) => {
         acceptedData = await acceptedResponse.json();
       }
 
-      // Get array of appointmentIds that have been accepted
       const acceptedAppointmentIds = acceptedData.map(accepted => accepted.appointmentId);
-
-      // Filter out pending appointments that have been accepted
       const filteredPendingData = pendingData.filter(
         pending => !acceptedAppointmentIds.includes(pending.appointmentId)
       );
@@ -100,24 +96,16 @@ const Appointments = ({ patient }) => {
     return service ? service.price : '0';
   };
 
-  // If backend uses Monday=0, Tuesday=1, ... Sunday=6, adjust JS getDay (Sunday=0) to that:
-  const mapJsDayToScheduleDay = (jsDay) => {
-    // Convert Sunday(0) -> 6, Monday(1) -> 0, ..., Saturday(6) -> 5
-    return (jsDay + 6) % 7;
-  };
-
-  const getWeekday = (dateTime) => new Date(dateTime).getDay(); // JS day
   const getScheduleForDate = (dateTime) => {
     if (!dateTime) return null;
-    const jsDay = new Date(dateTime).getDay(); // 0=Sun .. 6=Sat
-    // Backend uses Monday=0 .. Sunday=6
+    const jsDay = new Date(dateTime).getDay();
     const backendWeekday = (jsDay + 6) % 7;
     return schedules.find(s => Number(s.weekday) === backendWeekday) || null;
   };
 
   const isWithinTimeRange = (dateTime, sched) => {
     if (!sched || !sched.start_time || !sched.end_time) return true;
-    const normalize = (t) => t.length >= 5 ? t.slice(0,5) : t; // trim seconds if present
+    const normalize = (t) => t.length >= 5 ? t.slice(0,5) : t;
     const start = normalize(sched.start_time);
     const end = normalize(sched.end_time);
 
@@ -129,10 +117,8 @@ const Appointments = ({ patient }) => {
     return current >= start && current <= end;
   };
 
-  // Add near top utility area
-const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
+  const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
 
-  // Replace status extraction inside evaluateAvailability
   const evaluateAvailability = (dateTime) => {
     const sched = getScheduleForDate(dateTime);
     if (!sched) return { available: true, msg: 'No schedule restriction.' };
@@ -178,7 +164,7 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
 
       if (response.ok) {
         setMessage('Appointment cancelled successfully');
-        fetchAppointments(); // Refresh the list
+        fetchAppointments();
       } else {
         const data = await response.json();
         setMessage(data.error || 'Failed to cancel appointment');
@@ -190,7 +176,6 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
   };
 
   const handleUpdateAppointment = async () => {
-    // availability validation
     const evalResult = evaluateAvailability(editFormData.preferredDateTime);
     if (!evalResult.available) {
       setMessage(evalResult.msg);
@@ -214,7 +199,7 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
       if (response.ok) {
         setMessage('Appointment updated successfully');
         setIsEditModalOpen(false);
-        fetchAppointments(); // Refresh the list
+        fetchAppointments();
       } else {
         const data = await response.json();
         setMessage(data.error || 'Failed to update appointment');
@@ -260,130 +245,197 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
   };
 
   const formatDateTime = (dateTime) => {
-    return new Date(dateTime).toLocaleString();
+    return new Date(dateTime).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
   };
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'pending': return 'status-pending';
-      case 'confirmed': return 'status-confirmed';
-      case 'cancelled': return 'status-cancelled';
-      default: return 'status-pending';
-    }
+  const formatDate = (dateTime) => {
+    return new Date(dateTime).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
-  const getAttendanceStatus = (isAttended) => {
-    return isAttended === 1 ? 'Attended' : 'Not Attended';
+  const formatTime = (dateTime) => {
+    return new Date(dateTime).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
   };
 
-  const getAttendanceColor = (isAttended) => {
-    return isAttended === 1 ? 'status-attended' : 'status-not-attended';
+  const getServiceIcon = (serviceName) => {
+    const name = serviceName?.toLowerCase() || '';
+    if (name.includes('consult')) return '🩺';
+    if (name.includes('check') || name.includes('exam')) return '📋';
+    if (name.includes('vaccine') || name.includes('immun')) return '💉';
+    if (name.includes('lab') || name.includes('test')) return '🧪';
+    if (name.includes('dental')) return '🦷';
+    if (name.includes('eye') || name.includes('vision')) return '👁️';
+    if (name.includes('child') || name.includes('pedia')) return '👶';
+    if (name.includes('heart') || name.includes('cardio')) return '❤️';
+    return '⚕️';
   };
-
-  const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
   return (
-    <div className="appointments-container">
-      <div className="appointments-header">
-        <h1>My Appointments</h1>
-        <p>Manage your medical appointments and view appointment history</p>
+    <div className="appointments-modern">
+      {/* Header Section */}
+      <div className="appointments-header-modern">
+        <div className="header-title">
+          <h1>My Appointments</h1>
+          <p>Manage your medical appointments and view history</p>
+        </div>
+        <div className="header-stats">
+          <div className="stat-box">
+            <span className="stat-icon">📅</span>
+            <div className="stat-info">
+              <span className="stat-value">{pendingAppointments.length}</span>
+              <span className="stat-label">Pending</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <span className="stat-icon">✅</span>
+            <div className="stat-info">
+              <span className="stat-value">{acceptedAppointments.length}</span>
+              <span className="stat-label">Accepted</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Message Display */}
       {message && (
-        <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
           {message}
         </div>
       )}
 
-      <div className="appointments-tabs">
+      {/* Tabs */}
+      <div className="tabs-modern">
         <button 
-          className={`tab-button ${activeTab === 'pending' ? 'active' : ''}`}
+          className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
-          Pending Appointments ({pendingAppointments.length})
+          <span className="tab-icon">⏳</span>
+          Pending
+          <span className="tab-count">{pendingAppointments.length}</span>
         </button>
         <button 
-          className={`tab-button ${activeTab === 'accepted' ? 'active' : ''}`}
+          className={`tab-btn ${activeTab === 'accepted' ? 'active' : ''}`}
           onClick={() => setActiveTab('accepted')}
         >
-          Accepted Appointments ({acceptedAppointments.length})
+          <span className="tab-icon">✅</span>
+          Accepted
+          <span className="tab-count">{acceptedAppointments.length}</span>
         </button>
       </div>
 
+      {/* Content */}
       {isLoading ? (
-        <div className="loading">Loading appointments...</div>
+        <div className="loading-modern">
+          <div className="loading-spinner"></div>
+          <p>Loading appointments...</p>
+        </div>
       ) : (
-        <div className="appointments-content">
+        <div className="appointments-content-modern">
           {activeTab === 'pending' && (
-            <div className="appointments-section">
-              <h2>Pending Appointments</h2>
+            <div className="appointments-section-modern">
               {pendingAppointments.length === 0 ? (
-                <div className="no-appointments">
-                  <p>No pending appointments found.</p>
+                <div className="no-appointments-modern">
+                  <span className="empty-icon">📭</span>
+                  <h3>No Pending Appointments</h3>
+                  <p>You don't have any pending appointments at the moment.</p>
                 </div>
               ) : (
-                <div className="appointments-list">
+                <div className="appointments-grid">
                   {pendingAppointments.map((appointment) => (
-                    <div key={appointment.appointmentId} className="appointment-card">
-                      <div className="appointment-header">
-                        <div className="appointment-service">
-                          <h3>{getServiceName(appointment.serviceId)}</h3>
-                          <span className="appointment-price">₱{getServicePrice(appointment.serviceId)}</span>
+                    <div key={appointment.appointmentId} className="appointment-card-modern">
+                      <div className="card-header">
+                        <div className="service-badge">
+                          <span className="service-icon">{getServiceIcon(getServiceName(appointment.serviceId))}</span>
+                          <div className="service-info">
+                            <h3>{getServiceName(appointment.serviceId)}</h3>
+                            <span className="service-price">₱{getServicePrice(appointment.serviceId)}</span>
+                          </div>
                         </div>
-                        <div className={`appointment-status ${getStatusColor(appointment.status)}`}>
+                        <div className="status-badge pending">
+                          <span>⏳</span>
                           {appointment.status || 'Pending'}
                         </div>
                       </div>
                       
-                      <div className="appointment-details">
-                        <div className="appointment-info">
-                          <p><strong>Date & Time:</strong> {formatDateTime(appointment.preferredDateTime)}</p>
-                          <p><strong>Symptoms/Reason:</strong> {appointment.symptom}</p>
-                          <p><strong>Appointment ID:</strong> #{appointment.appointmentId}</p>
-                          <p><strong>Booked on:</strong> {formatDateTime(appointment.createdAt)}</p>
-                          {(() => {
-                            const sched = getScheduleForDate(appointment.preferredDateTime);
-                            const note = sched?.note || sched?.notes || '';
-                            if (!note.trim()) return null;
-                            const short = note.length > 40 ? note.slice(0,40) + '...' : note;
-                            return (
-                              <p className="doctor-note-line">
-                                <strong>Doctor Note:</strong> {short}
-                                <span className="note-badge" title={note}>📝</span>
-                              </p>
-                            );
-                          })()}
+                      <div className="card-body">
+                        <div className="info-grid">
+                          <div className="info-item">
+                            <span className="info-icon">📅</span>
+                            <div className="info-content">
+                              <span className="info-label">Date</span>
+                              <span className="info-value">{formatDate(appointment.preferredDateTime)}</span>
+                            </div>
+                          </div>
+                          <div className="info-item">
+                            <span className="info-icon">🕐</span>
+                            <div className="info-content">
+                              <span className="info-label">Time</span>
+                              <span className="info-value">{formatTime(appointment.preferredDateTime)}</span>
+                            </div>
+                          </div>
+                          <div className="info-item full-width">
+                            <span className="info-icon">📝</span>
+                            <div className="info-content">
+                              <span className="info-label">Symptoms</span>
+                              <span className="info-value">{appointment.symptom}</span>
+                            </div>
+                          </div>
                         </div>
+                        
+                        {(() => {
+                          const sched = getScheduleForDate(appointment.preferredDateTime);
+                          const note = sched?.note || sched?.notes || '';
+                          if (!note.trim()) return null;
+                          return (
+                            <div className="doctor-note">
+                              <span className="note-icon">📋</span>
+                              <span className="note-text">{note}</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       
-                      <div className="appointment-actions">
-                        <button
-                          className="action-btn edit-btn"
-                          onClick={() => handleEditAppointment(appointment)}
-                          disabled={(() => {
-                            const sched = getScheduleForDate(appointment.preferredDateTime);
-                            if (!sched) return false;
-                            const status = normalizeStatus(sched.status || '');
-                            return ['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status);
-                          })()}
-                          title={(() => {
-                            const sched = getScheduleForDate(appointment.preferredDateTime);
-                            if (!sched) return 'Reschedule';
-                            const status = normalizeStatus(sched.status || '');
-                            if (['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status)) {
-                              return `Doctor ${sched.status} - cannot reschedule this day`;
-                            }
-                            return 'Reschedule';
-                          })()}
-                        >
-                          Reschedule
-                        </button>
-                        <button 
-                          className="action-btn cancel-btn"
-                          onClick={() => handleCancelAppointment(appointment.appointmentId)}
-                        >
-                          Cancel
-                        </button>
+                      <div className="card-footer">
+                        <div className="appointment-meta">
+                          <span className="meta-item">ID: #{appointment.appointmentId}</span>
+                          <span className="meta-item">Booked: {formatDate(appointment.createdAt)}</span>
+                        </div>
+                        <div className="card-actions">
+                          <button
+                            className="action-btn reschedule-btn"
+                            onClick={() => handleEditAppointment(appointment)}
+                            disabled={(() => {
+                              const sched = getScheduleForDate(appointment.preferredDateTime);
+                              if (!sched) return false;
+                              const status = normalizeStatus(sched.status || '');
+                              return ['UNAVAILABLE','DAY_OFF','OFF','DAYOFF'].includes(status);
+                            })()}
+                          >
+                            <span>📅</span>
+                            Reschedule
+                          </button>
+                          <button 
+                            className="action-btn cancel-btn"
+                            onClick={() => handleCancelAppointment(appointment.appointmentId)}
+                          >
+                            <span>✕</span>
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -393,46 +445,75 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
           )}
 
           {activeTab === 'accepted' && (
-            <div className="appointments-section">
-              <h2>Accepted Appointments</h2>
+            <div className="appointments-section-modern">
               {acceptedAppointments.length === 0 ? (
-                <div className="no-appointments">
-                  <p>No accepted appointments found.</p>
+                <div className="no-appointments-modern">
+                  <span className="empty-icon">📭</span>
+                  <h3>No Accepted Appointments</h3>
+                  <p>You don't have any accepted appointments yet.</p>
                 </div>
               ) : (
-                <div className="appointments-list">
+                <div className="appointments-grid">
                   {acceptedAppointments.map((appointment) => (
-                    <div key={appointment.acceptedAppointmentId} className="appointment-card accepted">
-                      <div className="appointment-header">
-                        <div className="appointment-service">
-                          <h3>{getServiceName(appointment.serviceId)}</h3>
-                          <span className="appointment-price">₱{getServicePrice(appointment.serviceId)}</span>
+                    <div key={appointment.acceptedAppointmentId} className="appointment-card-modern accepted">
+                      <div className="card-header">
+                        <div className="service-badge">
+                          <span className="service-icon">{getServiceIcon(getServiceName(appointment.serviceId))}</span>
+                          <div className="service-info">
+                            <h3>{getServiceName(appointment.serviceId)}</h3>
+                            <span className="service-price">₱{getServicePrice(appointment.serviceId)}</span>
+                          </div>
                         </div>
-                        <div className={`appointment-status ${getAttendanceColor(appointment.isAttended)}`}>
-                          {getAttendanceStatus(appointment.isAttended)}
+                        <div className={`status-badge ${appointment.isAttended === 1 ? 'attended' : 'scheduled'}`}>
+                          <span>{appointment.isAttended === 1 ? '✅' : '📅'}</span>
+                          {appointment.isAttended === 1 ? 'Attended' : 'Scheduled'}
                         </div>
                       </div>
                       
-                      <div className="appointment-details">
-                        <div className="appointment-info">
-                          <p><strong>Date & Time:</strong> {formatDateTime(appointment.preferredDateTime)}</p>
-                          <p><strong>Symptoms/Reason:</strong> {appointment.symptom}</p>
-                          <p><strong>Accepted Appointment ID:</strong> #{appointment.acceptedAppointmentId}</p>
-                          <p><strong>Original Appointment ID:</strong> #{appointment.appointmentId}</p>
-                          <p><strong>Accepted on:</strong> {formatDateTime(appointment.createdAt)}</p>
-                          {(() => {
-                            const sched = getScheduleForDate(appointment.preferredDateTime);
-                            const noteText = sched ? (sched.notes || sched.note || '') : '';
-                            if (sched && noteText.trim()) {
-                              const short = noteText.length > 40 ? noteText.slice(0,40) + '...' : noteText;
-                              return (
-                                <p>
-                                  <strong>Doctor Schedule Note:</strong> {short}
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
+                      <div className="card-body">
+                        <div className="info-grid">
+                          <div className="info-item">
+                            <span className="info-icon">📅</span>
+                            <div className="info-content">
+                              <span className="info-label">Date</span>
+                              <span className="info-value">{formatDate(appointment.preferredDateTime)}</span>
+                            </div>
+                          </div>
+                          <div className="info-item">
+                            <span className="info-icon">🕐</span>
+                            <div className="info-content">
+                              <span className="info-label">Time</span>
+                              <span className="info-value">{formatTime(appointment.preferredDateTime)}</span>
+                            </div>
+                          </div>
+                          <div className="info-item full-width">
+                            <span className="info-icon">📝</span>
+                            <div className="info-content">
+                              <span className="info-label">Symptoms</span>
+                              <span className="info-value">{appointment.symptom}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {(() => {
+                          const sched = getScheduleForDate(appointment.preferredDateTime);
+                          const noteText = sched ? (sched.notes || sched.note || '') : '';
+                          if (noteText.trim()) {
+                            return (
+                              <div className="doctor-note">
+                                <span className="note-icon">📋</span>
+                                <span className="note-text">{noteText}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      
+                      <div className="card-footer">
+                        <div className="appointment-meta">
+                          <span className="meta-item">ID: #{appointment.acceptedAppointmentId}</span>
+                          <span className="meta-item">Accepted: {formatDate(appointment.createdAt)}</span>
                         </div>
                       </div>
                     </div>
@@ -444,67 +525,111 @@ const normalizeStatus = (s = '') => s.toUpperCase().trim().replace(/\s+/g, '_');
         </div>
       )}
 
-      {/* Edit Appointment Modal */}
+      {/* Edit Modal */}
       {isEditModalOpen && editingAppointment && (
-        <div className="modal-overlay" onClick={closeEditModal}>
-          <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeEditModal}>×</button>
+        <div className="modal-overlay-modern" onClick={closeEditModal}>
+          <div className="modal-modern" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeEditModal}>×</button>
             
-            <div className="modal-header">
-              <h3>Reschedule Appointment</h3>
-              <p>Service: {getServiceName(editingAppointment.serviceId)}</p>
+            <div className="modal-header-modern">
+              <div className="modal-service-icon">
+                <span>{getServiceIcon(getServiceName(editingAppointment.serviceId))}</span>
+              </div>
+              <div className="modal-title">
+                <h3>Reschedule Appointment</h3>
+                <p>{getServiceName(editingAppointment.serviceId)}</p>
+              </div>
             </div>
 
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="editDateTime">New Date & Time *</label>
-                <input
-                  type="datetime-local"
-                  id="editDateTime"
-                  name="preferredDateTime"
-                  value={editFormData.preferredDateTime}
-                  onChange={handleEditInputChange}
-                  min={getMinDateTime()}
-                  required
-                />
-              </div>
-              {selectedDaySchedule && (
-                <div className="schedule-info">
-                  <p><strong>Schedule Status:</strong> {selectedDaySchedule.status}</p>
-                  {selectedDaySchedule.start_time && selectedDaySchedule.end_time && (
-                    <p><strong>Available Window:</strong> {selectedDaySchedule.start_time} - {selectedDaySchedule.end_time}</p>
-                  )}
-                  <p><strong>Note:</strong> {selectedDaySchedule.notes || 'None'}</p>
+            <div className="modal-body-modern">
+              {message && (
+                <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+                  <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
+                  {message}
                 </div>
               )}
-              {availabilityMessage && (
-                <div className="availability-message">
-                  {availabilityMessage}
+
+              <div className="form-modern">
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">📅</span>
+                    New Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="preferredDateTime"
+                    value={editFormData.preferredDateTime}
+                    onChange={handleEditInputChange}
+                    min={getMinDateTime()}
+                  />
                 </div>
-              )}
-              <div className="form-group">
-                <label htmlFor="editSymptom">Symptoms / Reason for Visit *</label>
-                <textarea
-                  id="editSymptom"
-                  name="symptom"
-                  value={editFormData.symptom}
-                  onChange={handleEditInputChange}
-                  placeholder="Update your symptoms or reason for this appointment..."
-                  rows="4"
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button className="action-btn cancel-btn" onClick={closeEditModal}>
-                  Cancel
-                </button>
-                <button
-                  className="action-btn save-btn"
-                  onClick={handleUpdateAppointment}
-                  disabled={!evaluateAvailability(editFormData.preferredDateTime).available}
-                >
-                  Update Appointment
-                </button>
+
+                {selectedDaySchedule && (
+                  <div className="schedule-info-modern">
+                    <div className="schedule-header">
+                      <span className="schedule-icon">🗓️</span>
+                      <span>Doctor's Schedule</span>
+                    </div>
+                    <div className="schedule-details">
+                      <div className="schedule-item">
+                        <span className="schedule-label">Status:</span>
+                        <span className={`schedule-value ${normalizeStatus(selectedDaySchedule.status).toLowerCase()}`}>
+                          {selectedDaySchedule.status}
+                        </span>
+                      </div>
+                      {selectedDaySchedule.start_time && selectedDaySchedule.end_time && (
+                        <div className="schedule-item">
+                          <span className="schedule-label">Hours:</span>
+                          <span className="schedule-value">{selectedDaySchedule.start_time} - {selectedDaySchedule.end_time}</span>
+                        </div>
+                      )}
+                      {selectedDaySchedule.notes && (
+                        <div className="schedule-item">
+                          <span className="schedule-label">Note:</span>
+                          <span className="schedule-value">{selectedDaySchedule.notes}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {availabilityMessage && (
+                  <div className={`availability-badge ${evaluateAvailability(editFormData.preferredDateTime).available ? 'available' : 'unavailable'}`}>
+                    <span>{evaluateAvailability(editFormData.preferredDateTime).available ? '✓' : '⚠'}</span>
+                    {availabilityMessage}
+                  </div>
+                )}
+
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">📝</span>
+                    Symptoms / Reason
+                  </label>
+                  <textarea
+                    name="symptom"
+                    value={editFormData.symptom}
+                    onChange={handleEditInputChange}
+                    placeholder="Update your symptoms or reason for this appointment..."
+                    rows="4"
+                    disabled
+                    className="disabled-input"
+                  />
+                  <span className="input-note">Symptoms cannot be modified when rescheduling</span>
+                </div>
+
+                <div className="modal-actions-modern">
+                  <button className="btn-secondary" onClick={closeEditModal}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleUpdateAppointment}
+                    disabled={!evaluateAvailability(editFormData.preferredDateTime).available}
+                  >
+                    <span>✓</span>
+                    Update Appointment
+                  </button>
+                </div>
               </div>
             </div>
           </div>

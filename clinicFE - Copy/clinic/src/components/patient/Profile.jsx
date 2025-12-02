@@ -63,7 +63,6 @@ const Profile = ({ patient }) => {
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -82,7 +81,6 @@ const Profile = ({ patient }) => {
     setMessage('');
 
     try {
-      // Exclude dateOfBirth from the update payload
       const { dateOfBirth, ...updateData } = profileData;
       
       const response = await fetch(`http://localhost:3000/api/patients/${patient.patientId}`, {
@@ -99,7 +97,6 @@ const Profile = ({ patient }) => {
         setMessage('Profile updated successfully!');
         setIsEditing(false);
         
-        // Update localStorage with new patient data
         const updatedPatient = { ...patient, ...profileData };
         localStorage.setItem('patient', JSON.stringify(updatedPatient));
       } else {
@@ -124,7 +121,6 @@ const Profile = ({ patient }) => {
       newErrors.email = 'Email is invalid';
     }
     if (!profileData.phone.trim()) newErrors.phone = 'Phone number is required';
-    // Removed dateOfBirth validation since it's not being updated
     if (!profileData.emergencyContactName.trim()) newErrors.emergencyContactName = 'Emergency contact name is required';
     if (!profileData.emergencyContactRelationship.trim()) newErrors.emergencyContactRelationship = 'Emergency contact relationship is required';
     if (!profileData.emergencyContactPhone1.trim()) newErrors.emergencyContactPhone1 = 'Emergency contact phone is required';
@@ -140,299 +136,414 @@ const Profile = ({ patient }) => {
     setIsEditing(false);
     setErrors({});
     setMessage('');
-    fetchPatientProfile(); // Reset to original data
+    fetchPatientProfile();
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'Not provided';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getCompletionPercentage = () => {
+    const fields = [
+      profileData.firstName,
+      profileData.lastName,
+      profileData.email,
+      profileData.phone,
+      profileData.dateOfBirth,
+      profileData.emergencyContactName,
+      profileData.emergencyContactRelationship,
+      profileData.emergencyContactPhone1,
+      profileData.streetAddress,
+      profileData.barangay,
+      profileData.municipality
+    ];
+    const filledFields = fields.filter(field => field && field.trim() !== '').length;
+    return Math.round((filledFields / fields.length) * 100);
   };
 
   return (
-    <div className="profile-container">
-      <div className="profile-header">
-        <div className="profile-avatar">
-          <div className="avatar-circle">
-            <span>{profileData.firstName?.[0]}{profileData.lastName?.[0]}</span>
+    <div className="profile-modern">
+      {/* Header Section */}
+      <div className="profile-header-modern">
+        <div className="header-left">
+          <div className="avatar-modern">
+            <span className="avatar-initials">
+              {profileData.firstName?.[0]}{profileData.lastName?.[0]}
+            </span>
+            <div className="avatar-badge">
+              <span>✓</span>
+            </div>
+          </div>
+          <div className="header-info">
+            <h1>{profileData.firstName} {profileData.lastName}</h1>
+            <p className="header-subtitle">Patient Profile</p>
+            <div className="header-tags">
+              <span className="tag">
+                <span>📧</span>
+                {profileData.email}
+              </span>
+              <span className="tag">
+                <span>📱</span>
+                {profileData.phone}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="profile-title">
-          <h1>Account Settings</h1>
-          <p>Update your account information accordingly.</p>
+        <div className="header-right">
+          <div className="completion-card">
+            <div className="completion-header">
+              <span className="completion-icon">📊</span>
+              <span className="completion-label">Profile Completion</span>
+            </div>
+            <div className="completion-bar">
+              <div 
+                className="completion-progress" 
+                style={{ width: `${getCompletionPercentage()}%` }}
+              ></div>
+            </div>
+            <span className="completion-percentage">{getCompletionPercentage()}% Complete</span>
+          </div>
+          {!isEditing && (
+            <button className="edit-profile-btn" onClick={() => setIsEditing(true)}>
+              <span>✏️</span>
+              Edit Profile
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Message Display */}
       {message && (
-        <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
           {message}
         </div>
       )}
 
-      <div className="profile-content">
-        <div className="profile-section">
-          <div className="section-header">
-            <h2>Basic Information</h2>
-            {!isEditing && (
-              <button className="edit-btn" onClick={() => setIsEditing(true)}>
-                Edit Profile
-              </button>
+      {/* Profile Content */}
+      <div className="profile-content-modern">
+        {/* Basic Information Section */}
+        <div className="profile-section-modern">
+          <div className="section-header-modern">
+            <div className="section-title">
+              <span className="section-icon">👤</span>
+              <h2>Basic Information</h2>
+            </div>
+            <span className="section-badge">Personal</span>
+          </div>
+
+          <div className="section-body">
+            <div className="info-grid">
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">👤</span>
+                  <span className="info-label">First Name</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={profileData.firstName}
+                      onChange={handleInputChange}
+                      placeholder="Enter first name"
+                      className={errors.firstName ? 'error' : ''}
+                    />
+                    {errors.firstName && <span className="error-text">{errors.firstName}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.firstName || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">👤</span>
+                  <span className="info-label">Last Name</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={profileData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Enter last name"
+                      className={errors.lastName ? 'error' : ''}
+                    />
+                    {errors.lastName && <span className="error-text">{errors.lastName}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.lastName || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">📧</span>
+                  <span className="info-label">Email Address</span>
+                </div>
+                <span className="info-value">{profileData.email || 'Not provided'}</span>
+                <span className="info-note">Email cannot be changed</span>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">📱</span>
+                  <span className="info-label">Phone Number</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={profileData.phone}
+                      onChange={handleInputChange}
+                      placeholder="Enter phone number"
+                      className={errors.phone ? 'error' : ''}
+                    />
+                    {errors.phone && <span className="error-text">{errors.phone}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.phone || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card full-width">
+                <div className="info-card-header">
+                  <span className="info-icon">🎂</span>
+                  <span className="info-label">Date of Birth</span>
+                </div>
+                <span className="info-value">{formatDate(profileData.dateOfBirth)}</span>
+                <span className="info-note">Date of birth cannot be changed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Contact Section */}
+        <div className="profile-section-modern">
+          <div className="section-header-modern">
+            <div className="section-title">
+              <span className="section-icon">🚨</span>
+              <h2>Emergency Contact</h2>
+            </div>
+            <span className="section-badge emergency">Important</span>
+          </div>
+
+          <div className="section-body">
+            <div className="info-grid">
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">👥</span>
+                  <span className="info-label">Contact Name</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="emergencyContactName"
+                      value={profileData.emergencyContactName}
+                      onChange={handleInputChange}
+                      placeholder="Enter contact name"
+                      className={errors.emergencyContactName ? 'error' : ''}
+                    />
+                    {errors.emergencyContactName && <span className="error-text">{errors.emergencyContactName}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.emergencyContactName || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">💕</span>
+                  <span className="info-label">Relationship</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="emergencyContactRelationship"
+                      value={profileData.emergencyContactRelationship}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Mother, Father, Spouse"
+                      className={errors.emergencyContactRelationship ? 'error' : ''}
+                    />
+                    {errors.emergencyContactRelationship && <span className="error-text">{errors.emergencyContactRelationship}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.emergencyContactRelationship || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">📞</span>
+                  <span className="info-label">Primary Phone</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="tel"
+                      name="emergencyContactPhone1"
+                      value={profileData.emergencyContactPhone1}
+                      onChange={handleInputChange}
+                      placeholder="Enter primary phone"
+                      className={errors.emergencyContactPhone1 ? 'error' : ''}
+                    />
+                    {errors.emergencyContactPhone1 && <span className="error-text">{errors.emergencyContactPhone1}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.emergencyContactPhone1 || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">📱</span>
+                  <span className="info-label">Secondary Phone</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="tel"
+                      name="emergencyContactPhone2"
+                      value={profileData.emergencyContactPhone2}
+                      onChange={handleInputChange}
+                      placeholder="Enter secondary phone (optional)"
+                    />
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.emergencyContactPhone2 || 'Not provided'}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Address Section */}
+        <div className="profile-section-modern">
+          <div className="section-header-modern">
+            <div className="section-title">
+              <span className="section-icon">📍</span>
+              <h2>Address Information</h2>
+            </div>
+            <span className="section-badge">Location</span>
+          </div>
+
+          <div className="section-body">
+            <div className="info-grid">
+              <div className="info-card full-width">
+                <div className="info-card-header">
+                  <span className="info-icon">🏠</span>
+                  <span className="info-label">Street Address</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="streetAddress"
+                      value={profileData.streetAddress}
+                      onChange={handleInputChange}
+                      placeholder="Enter street address"
+                      className={errors.streetAddress ? 'error' : ''}
+                    />
+                    {errors.streetAddress && <span className="error-text">{errors.streetAddress}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.streetAddress || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">🏘️</span>
+                  <span className="info-label">Barangay</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="barangay"
+                      value={profileData.barangay}
+                      onChange={handleInputChange}
+                      placeholder="Enter barangay"
+                      className={errors.barangay ? 'error' : ''}
+                    />
+                    {errors.barangay && <span className="error-text">{errors.barangay}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.barangay || 'Not provided'}</span>
+                )}
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-header">
+                  <span className="info-icon">🏙️</span>
+                  <span className="info-label">Municipality</span>
+                </div>
+                {isEditing ? (
+                  <div className="input-wrapper">
+                    <input
+                      type="text"
+                      name="municipality"
+                      value={profileData.municipality}
+                      onChange={handleInputChange}
+                      placeholder="Enter municipality"
+                      className={errors.municipality ? 'error' : ''}
+                    />
+                    {errors.municipality && <span className="error-text">{errors.municipality}</span>}
+                  </div>
+                ) : (
+                  <span className="info-value">{profileData.municipality || 'Not provided'}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Address Preview */}
+            {!isEditing && profileData.streetAddress && (
+              <div className="address-preview">
+                <span className="preview-icon">📍</span>
+                <div className="preview-content">
+                  <span className="preview-label">Full Address</span>
+                  <span className="preview-value">
+                    {profileData.streetAddress}, {profileData.barangay}, {profileData.municipality}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
-
-          <div className="profile-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Name</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={profileData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="First Name"
-                    className={errors.firstName ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span className="user-icon">👤</span>
-                    <span>{profileData.firstName} {profileData.lastName}</span>
-                  </div>
-                )}
-                {errors.firstName && <span className="error-text">{errors.firstName}</span>}
-              </div>
-
-              {isEditing ? (
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={profileData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Last Name"
-                    className={errors.lastName ? 'error' : ''}
-                  />
-                  {errors.lastName && <span className="error-text">{errors.lastName}</span>}
-                </div>
-              ) : (
-                <div className="form-group">
-                  <label>Date of Birth</label>
-                  <div className="form-display">
-                    <span>{formatDate(profileData.dateOfBirth)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Email Address</label>
-                
-                  <div className="form-display">
-                    <span className="email-icon">✉️</span>
-                    <span>{profileData.email}</span>
-                  </div>
-              
-                {errors.email && <span className="error-text">{errors.email}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>Phone Number</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={profileData.phone}
-                    onChange={handleInputChange}
-                    className={errors.phone ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.phone}</span>
-                  </div>
-                )}
-                {errors.phone && <span className="error-text">{errors.phone}</span>}
-              </div>
-            </div>
-
-            {isEditing && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Date of Birth</label>
-                  <div className="form-display">
-                    <span>{formatDate(profileData.dateOfBirth)}</span>
-                  </div>
-                </div>
-                <div className="form-group">
-                  {/* Empty space for alignment */}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
-        <div className="profile-section">
-          <h2>Emergency Contact Information</h2>
-          
-          <div className="profile-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>In Case of Emergency Name</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="emergencyContactName"
-                    value={profileData.emergencyContactName}
-                    onChange={handleInputChange}
-                    placeholder="Tesi Dela Cruz"
-                    className={errors.emergencyContactName ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.emergencyContactName}</span>
-                  </div>
-                )}
-                {errors.emergencyContactName && <span className="error-text">{errors.emergencyContactName}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>In Case of Emergency Relationship to Patient</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="emergencyContactRelationship"
-                    value={profileData.emergencyContactRelationship}
-                    onChange={handleInputChange}
-                    placeholder="Mother"
-                    className={errors.emergencyContactRelationship ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.emergencyContactRelationship}</span>
-                  </div>
-                )}
-                {errors.emergencyContactRelationship && <span className="error-text">{errors.emergencyContactRelationship}</span>}
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>In Case of Emergency Phone Number 1</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    name="emergencyContactPhone1"
-                    value={profileData.emergencyContactPhone1}
-                    onChange={handleInputChange}
-                    placeholder="09123456789"
-                    className={errors.emergencyContactPhone1 ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.emergencyContactPhone1}</span>
-                  </div>
-                )}
-                {errors.emergencyContactPhone1 && <span className="error-text">{errors.emergencyContactPhone1}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>In Case of Emergency Phone Number 2</label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    name="emergencyContactPhone2"
-                    value={profileData.emergencyContactPhone2}
-                    onChange={handleInputChange}
-                    placeholder="09876543211"
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.emergencyContactPhone2 || 'Not provided'}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="profile-section">
-          <h2>Contact Details</h2>
-          
-          <div className="profile-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Street Address</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="streetAddress"
-                    value={profileData.streetAddress}
-                    onChange={handleInputChange}
-                    placeholder="Juan Siroy Street"
-                    className={errors.streetAddress ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.streetAddress}</span>
-                  </div>
-                )}
-                {errors.streetAddress && <span className="error-text">{errors.streetAddress}</span>}
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Baranggay</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="barangay"
-                    value={profileData.barangay}
-                    onChange={handleInputChange}
-                    placeholder="Catarman"
-                    className={errors.barangay ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.barangay}</span>
-                  </div>
-                )}
-                {errors.barangay && <span className="error-text">{errors.barangay}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>Municipality</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="municipality"
-                    value={profileData.municipality}
-                    onChange={handleInputChange}
-                    placeholder="Cordova"
-                    className={errors.municipality ? 'error' : ''}
-                  />
-                ) : (
-                  <div className="form-display">
-                    <span>{profileData.municipality}</span>
-                  </div>
-                )}
-                {errors.municipality && <span className="error-text">{errors.municipality}</span>}
-              </div>
-            </div>
-          </div>
-        </div>
-
+        {/* Action Buttons */}
         {isEditing && (
-          <div className="profile-actions">
-            <button className="cancel-btn" onClick={handleCancelEdit}>
+          <div className="profile-actions-modern">
+            <button className="btn-cancel" onClick={handleCancelEdit}>
+              <span>✕</span>
               Cancel
             </button>
             <button 
-              className="save-btn" 
+              className="btn-save"
               onClick={handleSaveProfile}
               disabled={isLoading}
             >
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <span>✓</span>
+                  Save Changes
+                </>
+              )}
             </button>
           </div>
         )}

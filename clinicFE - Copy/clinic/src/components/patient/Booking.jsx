@@ -7,7 +7,6 @@ const Booking = ({ patient }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('default');
-  const [viewMode, setViewMode] = useState('list');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,7 +39,6 @@ const Booking = ({ patient }) => {
     } else if (sortBy === 'price-high') {
       filtered = filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
     }
-    // 'default' keeps original order
 
     setFilteredServices(filtered);
   }, [services, searchTerm, sortBy]);
@@ -64,7 +62,7 @@ const Booking = ({ patient }) => {
   const handleServiceSelect = (service) => {
     setSelectedService(service);
     setIsModalOpen(true);
-    setMessage(''); // Clear any previous messages
+    setMessage('');
   };
 
   const closeModal = () => {
@@ -105,12 +103,10 @@ const Booking = ({ patient }) => {
     setMessage('');
 
     try {
-      // Convert HTML datetime-local (YYYY-MM-DDTHH:mm) to SQL DATETIME (YYYY-MM-DD HH:mm:ss)
       const toSqlDateTime = (dtLocal) => {
         if (!dtLocal) return dtLocal;
-        // Ensure seconds are present and replace 'T' with space
         const [datePart, timePart] = dtLocal.split('T');
-        const timeWithSeconds = timePart?.length === 5 ? `${timePart}:00` : timePart; // HH:mm -> HH:mm:00
+        const timeWithSeconds = timePart?.length === 5 ? `${timePart}:00` : timePart;
         return `${datePart} ${timeWithSeconds}`;
       };
 
@@ -121,8 +117,6 @@ const Booking = ({ patient }) => {
         symptom: appointmentData.symptom
       };
 
-      console.log('Booking appointment with data:', appointmentPayload);
-
       const response = await fetch('http://localhost:3000/api/appointments', {
         method: 'POST',
         headers: {
@@ -131,7 +125,6 @@ const Booking = ({ patient }) => {
         body: JSON.stringify(appointmentPayload),
       });
 
-      // Try to parse JSON; if it fails, fall back to text
       let data;
       try {
         data = await response.json();
@@ -148,7 +141,6 @@ const Booking = ({ patient }) => {
       } else {
         const backendMsg = typeof data === 'string' ? data : (data?.error || data?.message);
         setMessage(backendMsg || 'Failed to book appointment');
-        console.error('Appointment booking failed:', data);
       }
     } catch (error) {
       setMessage('Network error. Please try again.');
@@ -158,7 +150,6 @@ const Booking = ({ patient }) => {
     }
   };
 
-  // Get minimum date (today)
   const getMinDateTime = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -169,161 +160,241 @@ const Booking = ({ patient }) => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  const getServiceIcon = (serviceName) => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('consult')) return '🩺';
+    if (name.includes('check') || name.includes('exam')) return '📋';
+    if (name.includes('vaccine') || name.includes('immun')) return '💉';
+    if (name.includes('lab') || name.includes('test')) return '🧪';
+    if (name.includes('xray') || name.includes('x-ray')) return '🔬';
+    if (name.includes('dental')) return '🦷';
+    if (name.includes('eye') || name.includes('vision')) return '👁️';
+    if (name.includes('child') || name.includes('pedia')) return '👶';
+    if (name.includes('heart') || name.includes('cardio')) return '❤️';
+    if (name.includes('skin') || name.includes('derma')) return '🧴';
+    return '⚕️';
+  };
+
   return (
-    <div className="booking-container">
-      <div className="booking-header">
-        <h1>BOOK</h1>
-        <div className="booking-controls">
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search services..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          <div className="control-buttons">
-            <button 
-              className={`control-btn ${sortBy === 'default' ? 'active' : ''}`}
-              onClick={() => setSortBy('default')}
-            >
-              Default
-            </button>
-            <button 
-              className={`control-btn ${sortBy === 'a-z' ? 'active' : ''}`}
-              onClick={() => setSortBy('a-z')}
-            >
-              A-Z
-            </button>
-            <button 
-              className={`control-btn ${sortBy === 'z-a' ? 'active' : ''}`}
-              onClick={() => setSortBy('z-a')}
-            >
-              Z-A
-            </button>
-            <button 
-              className={`control-btn ${sortBy === 'price-low' ? 'active' : ''}`}
-              onClick={() => setSortBy('price-low')}
-            >
-              Price: Low to High
-            </button>
-            <button 
-              className={`control-btn ${sortBy === 'price-high' ? 'active' : ''}`}
-              onClick={() => setSortBy('price-high')}
-            >
-              Price: High to Low
-            </button>
+    <div className="booking-modern">
+      {/* Header Section */}
+      <div className="booking-header-modern">
+        <div className="header-title">
+          <h1>Book an Appointment</h1>
+          <p>Choose from our available medical services</p>
+        </div>
+        <div className="header-stats">
+          <div className="stat-box">
+            <span className="stat-icon">📋</span>
+            <div className="stat-info">
+              <span className="stat-value">{services.length}</span>
+              <span className="stat-label">Services</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="booking-content">
-        <div className="services-section">
-          <p className="services-description">
-            Please choose the type of service that you will be availing.
-          </p>
-          <h2>Available Services ({filteredServices.length})</h2>
+      {/* Search and Filter Section */}
+      <div className="booking-controls-modern">
+        <div className="search-box-modern">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search services..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="filter-buttons">
+          <button 
+            className={`filter-btn ${sortBy === 'default' ? 'active' : ''}`}
+            onClick={() => setSortBy('default')}
+          >
+            All
+          </button>
+          <button 
+            className={`filter-btn ${sortBy === 'a-z' ? 'active' : ''}`}
+            onClick={() => setSortBy('a-z')}
+          >
+            A-Z
+          </button>
+          <button 
+            className={`filter-btn ${sortBy === 'z-a' ? 'active' : ''}`}
+            onClick={() => setSortBy('z-a')}
+          >
+            Z-A
+          </button>
+          <button 
+            className={`filter-btn ${sortBy === 'price-low' ? 'active' : ''}`}
+            onClick={() => setSortBy('price-low')}
+          >
+            Price ↑
+          </button>
+          <button 
+            className={`filter-btn ${sortBy === 'price-high' ? 'active' : ''}`}
+            onClick={() => setSortBy('price-high')}
+          >
+            Price ↓
+          </button>
+        </div>
+      </div>
 
-          {message && !isModalOpen && (
-            <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
-              {message}
-            </div>
-          )}
+      {/* Message Display */}
+      {message && !isModalOpen && (
+        <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
+          {message}
+        </div>
+      )}
 
-          {filteredServices.length === 0 ? (
-            <div className="no-services">
-              <p>No services found matching your search criteria.</p>
-            </div>
-          ) : (
-            <div className="services-list">
-              {filteredServices.map((service) => (
-                <div 
-                  key={service.serviceId} 
-                  className="service-item"
-                >
-                  <div className="service-info">
-                    <div className="service-header">
-                      <span className="service-price">₱{service.price}</span>
-                      <span className="service-name">{service.serviceName}</span>
-                    </div>
-                    {service.description && (
-                      <span className="service-description">{service.description}</span>
-                    )}
+      {/* Services Grid */}
+      <div className="services-section-modern">
+        <div className="section-header">
+          <h2>Available Services</h2>
+          <span className="service-count">{filteredServices.length} services found</span>
+        </div>
+
+        {filteredServices.length === 0 ? (
+          <div className="no-services-modern">
+            <span className="empty-icon">🔍</span>
+            <h3>No services found</h3>
+            <p>Try adjusting your search criteria</p>
+          </div>
+        ) : (
+          <div className="services-grid">
+            {filteredServices.map((service) => (
+              <div key={service.serviceId} className="service-card">
+                <div className="service-card-header">
+                  <div className="service-icon-wrapper">
+                    <span>{getServiceIcon(service.serviceName)}</span>
                   </div>
+                  <div className="service-price-tag">
+                    ₱{service.price}
+                  </div>
+                </div>
+                <div className="service-card-body">
+                  <h3>{service.serviceName}</h3>
+                  {service.description && (
+                    <p className="service-desc">{service.description}</p>
+                  )}
+                </div>
+                <div className="service-card-footer">
                   <button 
-                    className="select-btn"
+                    className="book-btn"
                     onClick={() => handleServiceSelect(service)}
                   >
-                    Book
+                    <span>📅</span>
+                    Book Now
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Booking Modal */}
       {isModalOpen && selectedService && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>×</button>
+        <div className="modal-overlay-modern" onClick={closeModal}>
+          <div className="modal-modern" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeModal}>×</button>
             
-            <div className="modal-header">
-              <h3>Book Appointment for {selectedService.serviceName}</h3>
+            <div className="modal-header-modern">
+              <div className="modal-service-icon">
+                <span>{getServiceIcon(selectedService.serviceName)}</span>
+              </div>
+              <div className="modal-title">
+                <h3>Book Appointment</h3>
+                <p>{selectedService.serviceName}</p>
+              </div>
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body-modern">
               {message && (
-                <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+                <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+                  <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
                   {message}
                 </div>
               )}
 
-              <div className="appointment-form">
-                <div className="form-group">
-                  <label htmlFor="preferredDateTime">Preferred Date & Time *</label>
+              <div className="form-modern">
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">📅</span>
+                    Preferred Date & Time
+                  </label>
                   <input
                     type="datetime-local"
-                    id="preferredDateTime"
                     name="preferredDateTime"
                     value={appointmentData.preferredDateTime}
                     onChange={handleInputChange}
                     min={getMinDateTime()}
-                    required
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="symptom">Symptoms / Reason for Visit *</label>
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">📝</span>
+                    Symptoms / Reason for Visit
+                  </label>
                   <textarea
-                    id="symptom"
                     name="symptom"
                     value={appointmentData.symptom}
                     onChange={handleInputChange}
                     placeholder="Please describe your symptoms or reason for this appointment..."
                     rows="4"
-                    required
                   />
                 </div>
 
-                <div className="appointment-summary">
+                <div className="summary-card">
                   <h4>Appointment Summary</h4>
-                  <p><strong>Service:</strong> {selectedService.serviceName}</p>
-                  <p><strong>Price:</strong> ₱{selectedService.price}</p>
-                  <p><strong>Patient:</strong> {patient.firstName} {patient.lastName}</p>
-                  {appointmentData.preferredDateTime && (
-                    <p><strong>Date & Time:</strong> {new Date(appointmentData.preferredDateTime).toLocaleString()}</p>
-                  )}
+                  <div className="summary-grid">
+                    <div className="summary-item">
+                      <span className="summary-label">Service</span>
+                      <span className="summary-value">{selectedService.serviceName}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span className="summary-label">Price</span>
+                      <span className="summary-value price">₱{selectedService.price}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span className="summary-label">Patient</span>
+                      <span className="summary-value">{patient.firstName} {patient.lastName}</span>
+                    </div>
+                    {appointmentData.preferredDateTime && (
+                      <div className="summary-item full-width">
+                        <span className="summary-label">Scheduled</span>
+                        <span className="summary-value">
+                          {new Date(appointmentData.preferredDateTime).toLocaleString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <button 
-                  className="book-appointment-btn"
+                  className="submit-btn-modern"
                   onClick={handleBookAppointment}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Booking...' : 'BOOK APPOINTMENT'}
+                  {isLoading ? (
+                    <>
+                      <span className="spinner"></span>
+                      Booking...
+                    </>
+                  ) : (
+                    <>
+                      <span>✓</span>
+                      Confirm Booking
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -170,216 +170,327 @@ const Feedback = ({ patient }) => {
     });
   };
 
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, index) => (
-      <span key={index} className={`star ${index < rating ? 'filled' : ''}`}>
-        ⭐
-      </span>
-    ));
+  const getAverageRating = () => {
+    if (feedbacks.length === 0) return 0;
+    return (feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1);
   };
 
-  const renderRatingSelect = () => {
-    return (
-      <div className="rating-select">
-        <label htmlFor="rating">Rating *</label>
-        <div className="rating-options">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <label key={value} className={`rating-option ${formData.rating == value ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="rating"
-                value={value}
-                checked={formData.rating == value}
-                onChange={handleInputChange}
-              />
-              <span className="rating-label">
-                {renderStars(value)}
-                <span className="rating-text">
-                  {value === 1 && 'Very Poor'}
-                  {value === 2 && 'Poor'}
-                  {value === 3 && 'Average'}
-                  {value === 4 && 'Good'}
-                  {value === 5 && 'Excellent'}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </div>
-    );
+  const getRatingEmoji = (rating) => {
+    const emojis = ['😞', '😕', '😐', '🙂', '😄'];
+    return emojis[rating - 1] || '⭐';
+  };
+
+  const getRatingLabel = (rating) => {
+    const labels = ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
+    return labels[rating - 1] || '';
   };
 
   return (
-    <div className="feedback-container">
-      <div className="feedback-header">
-        <h1>Feedback & Reviews</h1>
-        <p>Share your experience with Wahing Medical Clinic</p>
-        <button className="add-feedback-btn" onClick={openNewFeedbackModal}>
+    <div className="feedback-modern">
+      {/* Header Section */}
+      <div className="feedback-header-modern">
+        <div className="header-title">
+          <h1>Feedback & Reviews</h1>
+          <p>Share your experience with Wahing Medical Clinic</p>
+        </div>
+        <button className="add-review-btn" onClick={openNewFeedbackModal}>
+          <span>✍️</span>
           Write a Review
         </button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="feedback-stats-modern">
+        <div className="stat-card-modern">
+          <div className="stat-icon-wrapper blue">
+            <span>📝</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-number">{feedbacks.length}</span>
+            <span className="stat-label">Total Reviews</span>
+          </div>
+        </div>
+        
+        {feedbacks.length > 0 && (
+          <div className="stat-card-modern">
+            <div className="stat-icon-wrapper gold">
+              <span>⭐</span>
+            </div>
+            <div className="stat-content">
+              <span className="stat-number">{getAverageRating()}</span>
+              <span className="stat-label">Average Rating</span>
+            </div>
+            <div className="rating-stars-small">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span 
+                  key={star} 
+                  className={`star-small ${star <= Math.round(getAverageRating()) ? 'filled' : ''}`}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="stat-card-modern">
+          <div className="stat-icon-wrapper green">
+            <span>👍</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-number">
+              {feedbacks.filter(f => f.rating >= 4).length}
+            </span>
+            <span className="stat-label">Positive Reviews</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Message Display */}
       {message && (
-        <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
           {message}
         </div>
       )}
 
+      {/* Content */}
       {isLoading && !isModalOpen ? (
-        <div className="loading">Loading feedbacks...</div>
+        <div className="loading-modern">
+          <div className="loading-spinner"></div>
+          <p>Loading feedbacks...</p>
+        </div>
       ) : (
-        <div className="feedback-content">
-          <div className="feedback-stats">
-            <div className="stats-card">
-              <h3>Your Reviews</h3>
-              <div className="stats-number">{feedbacks.length}</div>
-              <p>Total reviews submitted</p>
-            </div>
-            
-            {feedbacks.length > 0 && (
-              <div className="stats-card">
-                <h3>Average Rating</h3>
-                <div className="stats-number">
-                  {(feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)}
-                </div>
-                <div className="average-stars">
-                  {renderStars(Math.round(feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length))}
-                </div>
-              </div>
-            )}
+        <div className="feedback-content-modern">
+          <div className="section-header-modern">
+            <h2>Your Reviews</h2>
+            <span className="review-count">{feedbacks.length} reviews</span>
           </div>
 
-          <div className="feedback-list">
-            <h2>Your Reviews ({feedbacks.length})</h2>
-            
-            {feedbacks.length === 0 ? (
-              <div className="no-feedback">
-                <div className="no-feedback-icon">📝</div>
-                <p>You haven't written any reviews yet.</p>
-                <button className="add-feedback-btn" onClick={openNewFeedbackModal}>
-                  Write Your First Review
-                </button>
+          {feedbacks.length === 0 ? (
+            <div className="no-feedback-modern">
+              <div className="empty-illustration">
+                <span>📝</span>
               </div>
-            ) : (
-              <div className="feedback-items">
-                {feedbacks.map((feedback) => (
-                  <div key={feedback.feedbackId} className="feedback-item">
-                    <div className="feedback-header-item">
-                      <div className="feedback-rating">
-                        {renderStars(feedback.rating)}
-                        <span className="rating-number">({feedback.rating}/5)</span>
+              <h3>No Reviews Yet</h3>
+              <p>You haven't written any reviews yet. Share your experience to help us improve!</p>
+              <button className="add-review-btn" onClick={openNewFeedbackModal}>
+                <span>✍️</span>
+                Write Your First Review
+              </button>
+            </div>
+          ) : (
+            <div className="feedback-grid">
+              {feedbacks.map((feedback) => (
+                <div key={feedback.feedbackId} className="feedback-card-modern">
+                  <div className="card-header-modern">
+                    <div className="rating-display">
+                      <div className="rating-badge">
+                        <span className="rating-emoji">{getRatingEmoji(feedback.rating)}</span>
+                        <span className="rating-value">{feedback.rating}/5</span>
                       </div>
-                      <div className="feedback-date">
-                        {formatDate(feedback.createdAt)}
+                      <div className="rating-stars">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span 
+                            key={star} 
+                            className={`star ${star <= feedback.rating ? 'filled' : ''}`}
+                          >
+                            ★
+                          </span>
+                        ))}
                       </div>
+                      <span className="rating-label">{getRatingLabel(feedback.rating)}</span>
                     </div>
-                    
-                    <div className="feedback-comment">
-                      <p>"{feedback.comment}"</p>
-                    </div>
-
                     {feedback.isAnonymous && (
-                      <div className="anonymous-indicator">
-                        <span className="anonymous-badge">Anonymous Review</span>
-                      </div>
-                    )}
-                    
-                    <div className="feedback-actions">
-                      <button 
-                        className="action-btn edit-btn"
-                        onClick={() => handleEditFeedback(feedback)}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        className="action-btn delete-btn"
-                        onClick={() => handleDeleteFeedback(feedback.feedbackId)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    
-                    {feedback.updatedAt !== feedback.createdAt && (
-                      <div className="feedback-updated">
-                        <small>Last updated: {formatDate(feedback.updatedAt)}</small>
+                      <div className="anonymous-badge-modern">
+                        <span>🕶️</span>
+                        Anonymous
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+                  <div className="card-body-modern">
+                    <p className="feedback-comment-text">"{feedback.comment}"</p>
+                  </div>
+
+                  <div className="card-footer-modern">
+                    <div className="feedback-meta">
+                      <span className="meta-date">
+                        <span>📅</span>
+                        {formatDate(feedback.createdAt)}
+                      </span>
+                      {feedback.updatedAt !== feedback.createdAt && (
+                        <span className="meta-updated">
+                          (Edited)
+                        </span>
+                      )}
+                    </div>
+                    <div className="feedback-actions-modern">
+                      <button 
+                        className="action-btn-modern edit"
+                        onClick={() => handleEditFeedback(feedback)}
+                      >
+                        <span>✏️</span>
+                        Edit
+                      </button>
+                      <button 
+                        className="action-btn-modern delete"
+                        onClick={() => handleDeleteFeedback(feedback.feedbackId)}
+                      >
+                        <span>🗑️</span>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Feedback Modal */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>×</button>
+        <div className="modal-overlay-modern" onClick={closeModal}>
+          <div className="modal-modern" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeModal}>×</button>
             
-            <div className="modal-header">
-              <h3>{editingFeedback ? 'Edit Your Review' : 'Write a Review'}</h3>
-              <p>Share your experience with our medical services</p>
+            <div className="modal-header-modern">
+              <div className="modal-icon">
+                <span>{editingFeedback ? '✏️' : '✍️'}</span>
+              </div>
+              <div className="modal-title">
+                <h3>{editingFeedback ? 'Edit Your Review' : 'Write a Review'}</h3>
+                <p>Share your experience with our medical services</p>
+              </div>
             </div>
 
-            <div className="modal-body">
+            <div className="modal-body-modern">
               {message && (
-                <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+                <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+                  <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
                   {message}
                 </div>
               )}
 
-              <div className="feedback-form">
-                {renderRatingSelect()}
+              <div className="form-modern">
+                {/* Rating Selection */}
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">⭐</span>
+                    How would you rate your experience?
+                  </label>
+                  <div className="rating-selector">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rating-option-modern ${formData.rating == value ? 'selected' : ''}`}
+                        onClick={() => setFormData(prev => ({ ...prev, rating: value }))}
+                      >
+                        <span className="rating-emoji-large">{getRatingEmoji(value)}</span>
+                        <span className="rating-stars-option">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span 
+                              key={star} 
+                              className={`star-option ${star <= value ? 'filled' : ''}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </span>
+                        <span className="rating-text">{getRatingLabel(value)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                <div className="form-group">
-                  <label htmlFor="comment">Your Review *</label>
+                {/* Comment */}
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">💬</span>
+                    Your Review
+                  </label>
                   <textarea
-                    id="comment"
                     name="comment"
                     value={formData.comment}
                     onChange={handleInputChange}
                     placeholder="Please share your experience with our clinic, staff, and services..."
-                    rows="6"
-                    required
+                    rows="5"
                   />
-                  <div className="character-count">
-                    {formData.comment.length}/500 characters
+                  <div className="character-counter">
+                    <span className={formData.comment.length > 450 ? 'warning' : ''}>
+                      {formData.comment.length}/500
+                    </span>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <div className="anonymous-option">
-                    <label className="checkbox-label">
+                {/* Anonymous Option */}
+                <div className="anonymous-toggle">
+                  <label className="toggle-label">
+                    <div className="toggle-switch">
                       <input
                         type="checkbox"
-                        name="isAnonymous"
                         checked={formData.isAnonymous}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           isAnonymous: e.target.checked
                         }))}
                       />
-                      <span className="checkbox-custom"></span>
-                      <span className="checkbox-text">Submit feedback anonymously</span>
-                    </label>
-                    <p className="anonymous-note">
-                      Anonymous feedback will not show your name publicly, but we may still use it to improve our services.
-                    </p>
+                      <span className="toggle-slider"></span>
+                    </div>
+                    <div className="toggle-content">
+                      <span className="toggle-title">
+                        <span>🕶️</span>
+                        Submit Anonymously
+                      </span>
+                      <span className="toggle-description">
+                        Your name won't be displayed publicly with this review
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Summary Card */}
+                <div className="review-summary">
+                  <h4>Review Summary</h4>
+                  <div className="summary-content">
+                    <div className="summary-row">
+                      <span className="summary-label">Rating</span>
+                      <span className="summary-value">
+                        {getRatingEmoji(formData.rating)} {formData.rating}/5 - {getRatingLabel(formData.rating)}
+                      </span>
+                    </div>
+                    <div className="summary-row">
+                      <span className="summary-label">Visibility</span>
+                      <span className="summary-value">
+                        {formData.isAnonymous ? '🕶️ Anonymous' : '👤 Public'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="modal-actions">
-                  <button className="action-btn cancel-btn" onClick={closeModal}>
+                {/* Actions */}
+                <div className="modal-actions-modern">
+                  <button className="btn-secondary" onClick={closeModal}>
                     Cancel
                   </button>
                   <button 
-                    className="action-btn submit-btn"
+                    className="btn-primary"
                     onClick={handleSubmitFeedback}
-                    disabled={isLoading}
+                    disabled={isLoading || !formData.comment.trim()}
                   >
-                    {isLoading ? 'Submitting...' : (editingFeedback ? 'Update Review' : 'Submit Review')}
+                    {isLoading ? (
+                      <>
+                        <span className="spinner"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <span>✓</span>
+                        {editingFeedback ? 'Update Review' : 'Submit Review'}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

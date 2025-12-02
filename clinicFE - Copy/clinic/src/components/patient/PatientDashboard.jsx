@@ -13,6 +13,7 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   const [activeSection, setActiveSection] = useState("home")
   const [recentActivities, setRecentActivities] = useState([])
   const [services, setServices] = useState([])
+  const [upcomingAppointments, setUpcomingAppointments] = useState([])
 
   // Doctor's Note viewer state
   const [isNoteViewerOpen, setIsNoteViewerOpen] = useState(false)
@@ -28,7 +29,6 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   }
 
   useEffect(() => {
-    // Get patient data from localStorage
     const patientData = localStorage.getItem("patient")
     if (patientData) {
       try {
@@ -36,33 +36,26 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
         setPatient(parsedData);
       } catch (error) {
         console.error('Error parsing patient data:', error);
-        // Only redirect if there's no valid patient data
         localStorage.removeItem('patient');
         localStorage.removeItem('rememberMe');
         onNavigate('home');
         return;
       }
     } else {
-      // No patient data found, redirect to home
       onNavigate('home');
       return;
     }
 
-    // Set active section from URL hash
     const sectionFromURL = getSectionFromURL()
     setActiveSection(sectionFromURL)
 
-    // Listen for hash changes
     const handleHashChange = () => {
       const newSection = getSectionFromURL()
       setActiveSection(newSection)
     }
 
     window.addEventListener("hashchange", handleHashChange)
-
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange)
-    }
+    return () => window.removeEventListener("hashchange", handleHashChange)
   }, [onNavigate])
 
   useEffect(() => {
@@ -95,12 +88,22 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
       if (response.ok) {
         const appointments = await response.json()
 
-        // Sort appointments by creation date (most recent first) and take the last 3
+        // Get upcoming appointments (future dates with pending/confirmed status)
+        const now = new Date()
+        const upcoming = appointments
+          .filter(apt => {
+            const aptDate = new Date(apt.preferredDateTime || apt.appointmentDate || apt.createdAt)
+            return aptDate >= now && (apt.status === 'Pending' || apt.status === 'Confirmed' || apt.status === 'Accepted')
+          })
+          .sort((a, b) => new Date(a.preferredDateTime || a.appointmentDate) - new Date(b.preferredDateTime || b.appointmentDate))
+          .slice(0, 3)
+        
+        setUpcomingAppointments(upcoming)
+
         const sortedAppointments = appointments
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 3)
 
-        // Transform appointments into activity format
         const activities = sortedAppointments.map((appointment) => {
           const dateISO =
             appointment.appointmentDate ||
@@ -126,7 +129,6 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
       }
     } catch (error) {
       console.error("Error fetching recent activities:", error)
-      // Fallback to empty array if there's an error
       setRecentActivities([])
     }
   }
@@ -138,14 +140,12 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
 
   const handleSectionChange = (section) => {
     setActiveSection(section)
-    // Update URL hash without page reload
     window.location.hash = section
   }
 
   const handleLogout = () => {
     localStorage.removeItem("patient")
     localStorage.removeItem("rememberMe")
-    // Clear hash when logging out
     window.location.hash = ""
     onLogout()
     onNavigate("home")
@@ -172,7 +172,6 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
     try {
       const weekday = new Date(noteDate).getDay()
 
-      // Try plural path first, then fallback to singular if needed
       let res = await fetch("http://localhost:3000/api/schedules")
       if (!res.ok) {
         res = await fetch("http://localhost:3000/api/schedule")
@@ -197,6 +196,24 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
     }
   }
 
+  const formatAppointmentDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    })
+  }
+
+  const formatAppointmentTime = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    })
+  }
+
   if (!patient) {
     return (
       <div className="loading-container">
@@ -206,275 +223,322 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="header-left">
-          <div className="clinic-logo">🏥</div>
-          <h1>Wahing Medical Clinic</h1>
+    <div className="dashboard-wrapper">
+      {/* Top Header */}
+      <header className="top-header">
+        <div className="header-brand">
+          <div className="brand-logo">
+            <span>WMC</span>
+          </div>
+          <div className="brand-text">
+            <h1>Wahing Medical Clinic</h1>
+            <p>Patient Health Dashboard</p>
+          </div>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          <span>🚪</span>
-          LOG-OUT
-        </button>
+        <div className="header-actions">
+          <button className="header-icon-btn" onClick={() => handleSectionChange("reminders")}>
+            <span>🔔</span>
+          </button>
+          <button className="header-icon-btn" onClick={() => handleSectionChange("settings")}>
+            <span>⚙️</span>
+          </button>
+          <button className="header-icon-btn user-btn" onClick={handleLogout}>
+            <span>👤</span>
+          </button>
+        </div>
       </header>
 
-      <div className="dashboard-content">
+      <div className="dashboard-layout">
         {/* Sidebar */}
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <h3>Main Menu</h3>
-          </div>
-          <nav className="sidebar-nav">
+        <aside className="sidebar-modern">
+          <nav className="sidebar-nav-modern">
             <button
-              className={`nav-item ${activeSection === "home" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "home" ? "active" : ""}`}
               onClick={() => handleSectionChange("home")}
             >
-              <span className="nav-item-icon">🏠</span>
-              Home
+              <span className="nav-icon">🏠</span>
+              <span className="nav-label">Dashboard</span>
             </button>
             <button
-              className={`nav-item ${activeSection === "book" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "book" ? "active" : ""}`}
               onClick={() => handleSectionChange("book")}
             >
-              <span className="nav-item-icon">📅</span>
-              Book Appointment
+              <span className="nav-icon">📅</span>
+              <span className="nav-label">Book Appointment</span>
             </button>
             <button
-              className={`nav-item ${activeSection === "appointments" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "appointments" ? "active" : ""}`}
               onClick={() => handleSectionChange("appointments")}
             >
-              <span className="nav-item-icon">📋</span>
-              My Appointments
+              <span className="nav-icon">📋</span>
+              <span className="nav-label">My Appointments</span>
             </button>
             <button
-              className={`nav-item ${activeSection === "feedback" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "feedback" ? "active" : ""}`}
               onClick={() => handleSectionChange("feedback")}
             >
-              <span className="nav-item-icon">⭐</span>
-              Feedback
+              <span className="nav-icon">⭐</span>
+              <span className="nav-label">Feedback</span>
             </button>
             <button
-              className={`nav-item ${activeSection === "reminders" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "reminders" ? "active" : ""}`}
               onClick={() => handleSectionChange("reminders")}
             >
-              <span className="nav-item-icon">🔔</span>
-              Reminders
+              <span className="nav-icon">🔔</span>
+              <span className="nav-label">Reminders</span>
             </button>
-          </nav>
-
-          <div className="sidebar-separator"></div>
-
-          <div className="sidebar-footer">
-            <h4>Others</h4>
             <button
-              className={`nav-item ${activeSection === "settings" ? "active" : ""}`}
+              className={`nav-item-modern ${activeSection === "settings" ? "active" : ""}`}
               onClick={() => handleSectionChange("settings")}
             >
-              <span className="nav-item-icon">⚙️</span>
-              Account Settings
+              <span className="nav-icon">⚙️</span>
+              <span className="nav-label">Settings</span>
+            </button>
+          </nav>
+          <div className="sidebar-logout">
+            <button className="logout-btn-modern" onClick={handleLogout}>
+              <span>🚪</span>
+              <span>Log Out</span>
             </button>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="main-content">
+        <main className="main-content-modern">
           {activeSection === "home" && (
-            <div className="home-section">
-              {/* Welcome Section */}
-              <div className="welcome-section">
-                <div className="welcome-content">
-                  <div className="user-avatar">
-                    {patient.firstName?.[0]}
-                    {patient.lastName?.[0]}
+            <div className="home-modern">
+              {/* Health Overview Card */}
+              <div className="content-grid">
+                <div className="card-modern health-overview">
+                  <div className="card-header-modern">
+                    <h2>Health Overview</h2>
+                    <p>Your wellness at a glance</p>
                   </div>
-                  <div className="welcome-text">
-                    <h2>
-                      Welcome back, {patient.firstName} {patient.lastName}!
-                    </h2>
-                    <p>We're glad to see you again</p>
+                  <div className="health-metrics">
+                    <div className="metric-item">
+                      <div className="metric-icon activity">
+                        <span>📊</span>
+                      </div>
+                      <div className="metric-info">
+                        <h4>Total Appointments</h4>
+                        <p>Lifetime visits</p>
+                      </div>
+                      <div className="metric-value">
+                        <span className="value-number">{recentActivities.length}</span>
+                        <span className="value-unit">visits</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div className="metric-progress" style={{ width: `${Math.min(recentActivities.length * 10, 100)}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="metric-item">
+                      <div className="metric-icon heart">
+                        <span>❤️</span>
+                      </div>
+                      <div className="metric-info">
+                        <h4>Health Status</h4>
+                        <p>Current condition</p>
+                      </div>
+                      <div className="metric-value">
+                        <span className="value-number good">Good</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div className="metric-progress heart-progress" style={{ width: "85%" }}></div>
+                      </div>
+                    </div>
+
+                    <div className="metric-item">
+                      <div className="metric-icon energy">
+                        <span>⚡</span>
+                      </div>
+                      <div className="metric-info">
+                        <h4>Upcoming</h4>
+                        <p>Scheduled appointments</p>
+                      </div>
+                      <div className="metric-value">
+                        <span className="value-number">{upcomingAppointments.length}</span>
+                        <span className="value-unit">pending</span>
+                      </div>
+                      <div className="metric-bar">
+                        <div className="metric-progress energy-progress" style={{ width: `${Math.min(upcomingAppointments.length * 33, 100)}%` }}></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                
+
+                {/* Vital Signs Card */}
+                <div className="card-modern vital-signs">
+                  <div className="card-header-modern">
+                    <h2>Patient Info</h2>
+                    <p>Your profile details</p>
+                  </div>
+                  <div className="vital-list">
+                    <div className="vital-item">
+                      <div className="vital-icon temp">
+                        <span>👤</span>
+                      </div>
+                      <div className="vital-info">
+                        <h4>Name</h4>
+                        <p>{patient.firstName} {patient.lastName}</p>
+                      </div>
+                    </div>
+                    <div className="vital-item">
+                      <div className="vital-icon bp">
+                        <span>✉️</span>
+                      </div>
+                      <div className="vital-info">
+                        <h4>Email</h4>
+                        <p>{patient.email}</p>
+                      </div>
+                    </div>
+                    <div className="vital-item">
+                      <div className="vital-icon o2">
+                        <span>📞</span>
+                      </div>
+                      <div className="vital-info">
+                        <h4>Phone</h4>
+                        <p>{patient.phone}</p>
+                      </div>
+                    </div>
+                    <div className="vital-item">
+                      <div className="vital-icon id">
+                        <span>🆔</span>
+                      </div>
+                      <div className="vital-info">
+                        <h4>Patient ID</h4>
+                        <p>#{patient.patientId || patient.id || "1"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Dashboard Grid */}
-              <div className="dashboard-grid">
-                {/* Profile Information */}
-                <div className="dashboard-card">
-                  <div className="card-header">
-                    <h3 className="card-title">
-                      <span>👤</span>
-                      Profile Information
-                    </h3>
+              {/* Bottom Row */}
+              <div className="content-grid bottom-row">
+                {/* Upcoming Appointments */}
+                <div className="card-modern appointments-card">
+                  <div className="card-header-modern">
+                    <h2>Upcoming Appointments</h2>
+                    <p>Your scheduled visits</p>
                   </div>
-                  <div className="card-content">
-                    <div className="profile-details">
-                      <div className="profile-item">
-                        <div className="profile-item-label">
-                          <span>✉️</span>
-                          <span>Email:</span>
-                        </div>
-                        <span className="profile-item-value">{patient.email}</span>
+                  <div className="appointments-list">
+                    {upcomingAppointments.length === 0 ? (
+                      <div className="no-appointments">
+                        <p>No upcoming appointments</p>
+                        <button className="btn-primary" onClick={() => handleSectionChange("book")}>
+                          Book Now
+                        </button>
                       </div>
-                      <div className="profile-item">
-                        <div className="profile-item-label">
-                          <span>📞</span>
-                          <span>Phone:</span>
-                        </div>
-                        <span className="profile-item-value">{patient.phone}</span>
-                      </div>
-                      <div className="profile-item">
-                        <div className="profile-item-label">
-                          <span>🆔</span>
-                          <span>Patient ID:</span>
-                        </div>
-                        <span className="profile-item-value">UID #{patient.patientId || patient.id || "1"}</span>
-                      </div>
-                      <div className="profile-item">
-                        <div className="profile-item-label">
-                          <span>⏰</span>
-                          <span>Member Since:</span>
-                        </div>
-                        <span className="profile-item-value">
-                          {patient.createdAt ? new Date(patient.createdAt).toLocaleDateString() : "Recently joined"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="dashboard-card">
-                  <div className="card-header">
-                    <h3 className="card-title">
-                      <span>📊</span>
-                      Recent Activity
-                    </h3>
-                  </div>
-                  <div className="card-content">
-                    <div className="activity-list">
-                      {recentActivities.length === 0 ? (
-                        <div className="no-activities">
-                          <p>No recent appointments found.</p>
-                          <button className="action-btn action-btn-outline" onClick={() => handleSectionChange("book")}>
-                            Book Your First Appointment
-                          </button>
-                        </div>
-                      ) : (
-                        recentActivities.map((activity) => (
-                          <div key={activity.id} className="activity-item">
-                            <div className="activity-info">
-                              <p>{activity.type}</p>
-                              <small>{activity.date}</small>
-                            </div>
-                            <div className="activity-actions" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                              {/* Removed the View Note button per request */}
-                              <div className={`activity-status ${activity.status.toLowerCase()}`}>{activity.status}</div>
+                    ) : (
+                      upcomingAppointments.map((apt) => (
+                        <div key={apt.appointmentId} className="appointment-item">
+                          <div className="appointment-avatar">
+                            <span>👨‍⚕️</span>
+                          </div>
+                          <div className="appointment-details">
+                            <h4>Dr. Jessieneth Wahing</h4>
+                            <p>{getServiceName(apt.serviceId)}</p>
+                            <div className="appointment-meta">
+                              <span>📅 {formatAppointmentDate(apt.preferredDateTime || apt.appointmentDate)}</span>
+                              <span>🕐 {formatAppointmentTime(apt.preferredDateTime || apt.appointmentDate)}</span>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
+                          <div className="appointment-actions">
+                            <button className="btn-confirm">Confirmed</button>
+                            <button className="btn-reschedule" onClick={() => handleSectionChange("appointments")}>View</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="dashboard-card">
-                  <div className="card-header">
-                    <h3 className="card-title">
-                      <span>⚡</span>
-                      Quick Actions
-                    </h3>
+                {/* Quick Actions / Reminders */}
+                <div className="card-modern reminders-card">
+                  <div className="card-header-modern">
+                    <h2>Quick Actions</h2>
+                    <p>Common tasks</p>
                   </div>
-                  <div className="card-content">
-                    <div className="quick-actions">
-                      <button className="action-btn action-btn-primary" onClick={() => handleSectionChange("book")}>
+                  <div className="quick-actions-modern">
+                    <button className="quick-action-item" onClick={() => handleSectionChange("book")}>
+                      <div className="action-icon book">
                         <span>📅</span>
-                        Book Appointment
-                      </button>
-                      <button
-                        className="action-btn action-btn-outline"
-                        onClick={() => handleSectionChange("appointments")}
-                      >
-                        <span>📊</span>
-                        View History
-                      </button>
-                      <button className="action-btn action-btn-outline" onClick={() => handleSectionChange("settings")}>
-                        <span>👤</span>
-                        Edit Profile
-                      </button>
-                      {/* New: Open Doctor's Note viewer for a specific day */}
-                      <button className="action-btn action-btn-outline" onClick={() => openNoteViewer()}>
+                      </div>
+                      <div className="action-info">
+                        <h4>Book Appointment</h4>
+                        <p>Schedule a new visit</p>
+                      </div>
+                    </button>
+                    <button className="quick-action-item" onClick={() => handleSectionChange("appointments")}>
+                      <div className="action-icon view">
+                        <span>📋</span>
+                      </div>
+                      <div className="action-info">
+                        <h4>View History</h4>
+                        <p>See past appointments</p>
+                      </div>
+                    </button>
+                    <button className="quick-action-item" onClick={() => openNoteViewer()}>
+                      <div className="action-icon note">
                         <span>📝</span>
-                        Doctor's Note
-                      </button>
-                    </div>
+                      </div>
+                      <div className="action-info">
+                        <h4>Doctor's Note</h4>
+                        <p>View clinic schedule notes</p>
+                      </div>
+                    </button>
+                    <button className="quick-action-item" onClick={() => handleSectionChange("feedback")}>
+                      <div className="action-icon feedback">
+                        <span>⭐</span>
+                      </div>
+                      <div className="action-info">
+                        <h4>Leave Feedback</h4>
+                        <p>Rate your experience</p>
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
 
               {/* About Doctor Section */}
-              <div className="about-doctor-section">
-                <div className="doctor-header">
-                  <h2>🏥 About Doctor Wahing</h2>
-                </div>
-                <div className="doctor-content">
-                  <div className="doctor-info">
+              <div className="card-modern doctor-card">
+                <div className="doctor-content-modern">
+                  <div className="doctor-info-modern">
+                    <h2>About Your Doctor</h2>
                     <h3>Dr. Jessieneth Stephen F. Wahing</h3>
-                    <div className="doctor-specialties">
-                      <div className="specialty-item">
-                        <div className="specialty-bullet"></div>
-                        <span>
-                          <strong>Specialization:</strong> General Medicine
-                        </span>
-                      </div>
-                      <div className="specialty-item">
-                        <div className="specialty-bullet"></div>
-                        <span>
-                          <strong>Years of Experience:</strong> 10+ years
-                        </span>
-                      </div>
-                      <div className="specialty-item">
-                        <div className="specialty-bullet"></div>
-                        <span>
-                          <strong>Short Bio:</strong> "Dedicated to providing excellent healthcare services to the
-                          community."
-                        </span>
-                      </div>
+                    <div className="doctor-badges">
+                      <span className="badge">General Medicine</span>
+                      <span className="badge">10+ Years Experience</span>
                     </div>
-
-                    <div className="doctor-mission-vision">
-                      <div className="vision-card">
-                        <h4>
-                          <span>🎯</span>
-                          Vision
-                        </h4>
-                        <p>
-                          "To be the leading healthcare provider in our community, delivering compassionate and quality
-                          medical care."
-                        </p>
+                    <p className="doctor-bio">
+                      "Dedicated to providing excellent healthcare services to the community with compassion and expertise."
+                    </p>
+                    <div className="doctor-vision-mission">
+                      <div className="vm-item">
+                        <span className="vm-icon">🎯</span>
+                        <div>
+                          <h4>Vision</h4>
+                          <p>To be the leading healthcare provider in our community, delivering compassionate and quality medical care.</p>
+                        </div>
                       </div>
-                      <div className="mission-card">
-                        <h4>
-                          <span>❤️</span>
-                          Mission
-                        </h4>
-                        <p>
-                          "To offer accessible, patient-centered, and high-quality healthcare services that improve the
-                          lives of our patients."
-                        </p>
+                      <div className="vm-item">
+                        <span className="vm-icon">❤️</span>
+                        <div>
+                          <h4>Mission</h4>
+                          <p>To offer accessible, patient-centered, and high-quality healthcare services that improve lives.</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="doctor-image-container">
+                  <div className="doctor-image-modern">
                     <img
-                      src="/assets/wahing.jpg" 
+                      src="/assets/wahing.jpg"
                       alt="Dr. Jessieneth Stephen F. Wahing"
-                      className="doctor-image"
                     />
-                    <div className="doctor-card">
+                    <div className="doctor-name-tag">
                       <h4>DR. JESSIENETH STEPHEN WAHING</h4>
+                      <p>General Practitioner</p>
                     </div>
                   </div>
                 </div>
@@ -483,71 +547,37 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
           )}
 
           {activeSection === "book" && <Booking patient={patient} />}
-
           {activeSection === "appointments" && <Appointments patient={patient} />}
-
           {activeSection === "feedback" && <Feedback patient={patient} />}
-
           {activeSection === "settings" && <Profile patient={patient} />}
-
           {activeSection === "reminders" && <Reminders patient={patient} />}
 
           {/* Doctor's Note Modal */}
           {isNoteViewerOpen && (
-            <div
-              className="modal-backdrop"
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,0.4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 1000,
-              }}
-              role="dialog"
-              aria-modal="true"
-            >
-              <div
-                className="dashboard-card"
-                style={{ width: "min(720px, 92vw)", maxHeight: "85vh", overflow: "auto" }}
-              >
-                <div className="card-header">
-                  <h3 className="card-title">
-                    <span>📝</span>
-                    Doctor's Note
-                  </h3>
+            <div className="modal-overlay-modern" onClick={closeNoteViewer}>
+              <div className="modal-content-modern" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header-modern">
+                  <h3>📝 Doctor's Note</h3>
+                  <button className="modal-close-modern" onClick={closeNoteViewer}>×</button>
                 </div>
-                <div className="card-content">
-                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
-                    <label htmlFor="noteDate"><strong>Select date:</strong></label>
+                <div className="modal-body-modern">
+                  <div className="note-date-picker">
+                    <label htmlFor="noteDate">Select date:</label>
                     <input
                       id="noteDate"
                       type="date"
                       value={noteDate}
                       onChange={(e) => setNoteDate(e.target.value)}
                     />
-                    <button className="action-btn action-btn-primary" onClick={fetchDoctorNote} disabled={noteLoading}>
+                    <button className="btn-primary" onClick={fetchDoctorNote} disabled={noteLoading}>
                       {noteLoading ? "Loading..." : "View Note"}
                     </button>
-                    <button className="action-btn action-btn-outline" onClick={closeNoteViewer}>Close</button>
                   </div>
 
-                  {noteError && (
-                    <div style={{ color: "#b00020", marginBottom: "0.75rem" }}>{noteError}</div>
-                  )}
+                  {noteError && <div className="note-error">{noteError}</div>}
 
                   {noteContent && (
-                    <div
-                      className="note-body"
-                      style={{
-                        whiteSpace: "pre-wrap",
-                        background: "#fafafa",
-                        border: "1px solid #eee",
-                        borderRadius: "8px",
-                        padding: "1rem",
-                      }}
-                    >
+                    <div className="note-content">
                       {noteContent}
                     </div>
                   )}

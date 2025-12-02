@@ -127,108 +127,243 @@ const Reminders = ({ patient }) => {
     });
   };
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const getRelativeTime = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return formatDate(dateString);
+  };
+
   const getReminderStats = () => {
     const total = reminders.length;
     const unread = reminders.filter(r => r.isRead === 0).length;
     const today = reminders.filter(r => {
       const reminderDate = new Date(r.preferredDateTime).toDateString();
-      const today = new Date().toDateString();
-      return reminderDate === today;
+      const todayDate = new Date().toDateString();
+      return reminderDate === todayDate;
     }).length;
     return { total, unread, today };
+  };
+
+  const getServiceIcon = (serviceName) => {
+    const name = serviceName?.toLowerCase() || '';
+    if (name.includes('consult')) return '🩺';
+    if (name.includes('check') || name.includes('exam')) return '📋';
+    if (name.includes('vaccine') || name.includes('immun')) return '💉';
+    if (name.includes('lab') || name.includes('test')) return '🧪';
+    if (name.includes('dental')) return '🦷';
+    if (name.includes('eye') || name.includes('vision')) return '👁️';
+    if (name.includes('follow')) return '🔄';
+    return '🔔';
   };
 
   const stats = getReminderStats();
 
   return (
-    <div className="reminders-container">
-      <div className="reminders-header">
-        <div className="header-content">
+    <div className="reminders-modern">
+      {/* Header Section */}
+      <div className="reminders-header-modern">
+        <div className="header-title">
           <h1>My Reminders</h1>
-          <p>View your medical reminders and notifications</p>
+          <p>Stay updated with your medical notifications</p>
         </div>
-        
-        
+        <div className="header-stats">
+          <div className="stat-box">
+            <span className="stat-icon">🔔</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.total}</span>
+              <span className="stat-label">Total</span>
+            </div>
+          </div>
+          <div className="stat-box highlight">
+            <span className="stat-icon">✨</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.unread}</span>
+              <span className="stat-label">Unread</span>
+            </div>
+          </div>
+          <div className="stat-box">
+            <span className="stat-icon">📅</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.today}</span>
+              <span className="stat-label">Today</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="reminders-controls">
-        
-        
-        <div className="filter-controls">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="filter-select"
+      {/* Controls Section */}
+      <div className="reminders-controls-modern">
+        <div className="search-box-modern">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search reminders..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="filter-tabs">
+          <button 
+            className={`filter-tab ${filterStatus === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('all')}
           >
-            <option value="all">All Reminders</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-          </select>
+            <span>📋</span>
+            All
+            <span className="tab-count">{reminders.length}</span>
+          </button>
+          <button 
+            className={`filter-tab ${filterStatus === 'unread' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('unread')}
+          >
+            <span>✨</span>
+            Unread
+            <span className="tab-count">{stats.unread}</span>
+          </button>
+          <button 
+            className={`filter-tab ${filterStatus === 'read' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('read')}
+          >
+            <span>✓</span>
+            Read
+            <span className="tab-count">{stats.total - stats.unread}</span>
+          </button>
         </div>
       </div>
 
+      {/* Message Display */}
       {message && (
-        <div className={`message ${message.includes('successfully') || message.includes('marked') ? 'success' : 'error'}`}>
+        <div className={`message-modern ${message.includes('successfully') || message.includes('marked') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') || message.includes('marked') ? '✓' : '⚠'}</span>
           {message}
         </div>
       )}
 
+      {/* Content */}
       {isLoading ? (
-        <div className="loading">Loading reminders...</div>
+        <div className="loading-modern">
+          <div className="loading-spinner"></div>
+          <p>Loading reminders...</p>
+        </div>
       ) : (
-        <div className="reminders-content">
+        <div className="reminders-content-modern">
           {filteredReminders.length === 0 ? (
-            <div className="no-reminders">
-              <div className="no-reminders-icon">🔔</div>
-              <p>No reminders found matching your criteria.</p>
+            <div className="no-reminders-modern">
+              <div className="empty-illustration">
+                <span>🔔</span>
+              </div>
+              <h3>No Reminders Found</h3>
+              <p>
+                {filterStatus === 'unread' 
+                  ? "You've read all your reminders! Great job staying updated."
+                  : filterStatus === 'read'
+                  ? "No read reminders yet."
+                  : "You don't have any reminders at the moment."}
+              </p>
             </div>
           ) : (
-            <div className="reminders-list">
+            <div className="reminders-list-modern">
               {filteredReminders.map((reminder) => (
                 <div 
                   key={reminder.reminderId} 
-                  className={`reminder-card ${reminder.isRead === 0 ? 'unread' : 'read'}`}
+                  className={`reminder-card-modern ${reminder.isRead === 0 ? 'unread' : 'read'}`}
                   onClick={() => handleViewReminder(reminder)}
                 >
-                  <div className="reminder-header">
-                    <div className="reminder-service">
-                      <h3>{reminder.serviceName || 'Medical Reminder'}</h3>
-                      {reminder.isRead === 0 && <span className="unread-badge">New</span>}
+                  <div className="card-indicator"></div>
+                  
+                  <div className="card-content">
+                    <div className="card-header-modern">
+                      <div className="service-info-modern">
+                        <div className="service-icon-modern">
+                          <span>{getServiceIcon(reminder.serviceName)}</span>
+                        </div>
+                        <div className="service-details">
+                          <h3>{reminder.serviceName || 'Medical Reminder'}</h3>
+                          <span className="reminder-time">{getRelativeTime(reminder.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className="card-badges">
+                        {reminder.isRead === 0 && (
+                          <span className="new-badge">
+                            <span>✨</span>
+                            New
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="reminder-actions" onClick={(e) => e.stopPropagation()}>
-                      {reminder.isRead === 0 ? (
-                        <button 
-                          className="action-btn mark-read-btn"
-                          onClick={() => handleMarkAsRead(reminder.reminderId)}
-                          title="Mark as Read"
-                        >
-                          Mark Read
-                        </button>
-                      ) : (
-                        <button 
-                          className="action-btn mark-unread-btn"
-                          onClick={() => handleMarkAsUnread(reminder.reminderId)}
-                          title="Mark as Unread"
-                        >
-                          Mark Unread
-                        </button>
+                    
+                    <div className="card-body-modern">
+                      <p className="reminder-message-modern">
+                        {reminder.message.length > 120 
+                          ? `${reminder.message.substring(0, 120)}...` 
+                          : reminder.message}
+                      </p>
+                      
+                      {reminder.preferredDateTime && (
+                        <div className="appointment-info">
+                          <div className="info-chip">
+                            <span>📅</span>
+                            {formatDate(reminder.preferredDateTime)}
+                          </div>
+                          <div className="info-chip">
+                            <span>🕐</span>
+                            {formatTime(reminder.preferredDateTime)}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                  
-                  <div className="reminder-content">
-                    <p className="reminder-message">
-                      {reminder.message.length > 100 
-                        ? `${reminder.message.substring(0, 100)}...` 
-                        : reminder.message}
-                    </p>
-                    {reminder.preferredDateTime && (
-                      <div className="reminder-datetime">
-                        📅 {formatDateTime(reminder.preferredDateTime)}
+                    
+                    <div className="card-footer-modern">
+                      <div className="footer-meta">
+                        <span className="reminder-id">ID: #{reminder.reminderId}</span>
                       </div>
-                    )}
-                    
-                    
+                      <div className="footer-actions" onClick={(e) => e.stopPropagation()}>
+                        {reminder.isRead === 0 ? (
+                          <button 
+                            className="action-btn-modern mark-read"
+                            onClick={() => handleMarkAsRead(reminder.reminderId)}
+                          >
+                            <span>✓</span>
+                            Mark Read
+                          </button>
+                        ) : (
+                          <button 
+                            className="action-btn-modern mark-unread"
+                            onClick={() => handleMarkAsUnread(reminder.reminderId)}
+                          >
+                            <span>○</span>
+                            Mark Unread
+                          </button>
+                        )}
+                        <button className="action-btn-modern view">
+                          <span>👁️</span>
+                          View
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -239,66 +374,109 @@ const Reminders = ({ patient }) => {
 
       {/* View Reminder Modal */}
       {isViewModalOpen && selectedReminder && (
-        <div className="modal-overlay" onClick={closeViewModal}>
-          <div className="reminder-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeViewModal}>×</button>
+        <div className="modal-overlay-modern" onClick={closeViewModal}>
+          <div className="modal-modern" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeViewModal}>×</button>
             
-            <div className="modal-header">
-              <h3>Reminder Details</h3>
-              <span className={`status-badge ${selectedReminder.isRead === 0 ? 'unread' : 'read'}`}>
-                {selectedReminder.isRead === 0 ? 'Unread' : 'Read'}
-              </span>
+            <div className="modal-header-modern">
+              <div className="modal-icon">
+                <span>{getServiceIcon(selectedReminder.serviceName)}</span>
+              </div>
+              <div className="modal-title">
+                <h3>Reminder Details</h3>
+                <p>{selectedReminder.serviceName || 'Medical Reminder'}</p>
+              </div>
             </div>
 
-            <div className="modal-body">
-              <div className="reminder-detail">
-                <div className="detail-section">
-                  <h4>Service Information</h4>
-                  <p><strong>Service:</strong> {selectedReminder.serviceName || 'Medical Reminder'}</p>
-                  {selectedReminder.appointmentId && (
-                    <p><strong>Related Appointment:</strong> #{selectedReminder.appointmentId}</p>
-                  )}
-                  {selectedReminder.preferredDateTime && (
-                    <p><strong>Scheduled Date & Time:</strong> {formatDateTime(selectedReminder.preferredDateTime)}</p>
-                  )}
-                </div>
+            <div className="modal-body-modern">
+              {/* Status Badge */}
+              <div className="status-section">
+                <span className={`status-badge-modern ${selectedReminder.isRead === 0 ? 'unread' : 'read'}`}>
+                  <span>{selectedReminder.isRead === 0 ? '✨' : '✓'}</span>
+                  {selectedReminder.isRead === 0 ? 'Unread' : 'Read'}
+                </span>
+              </div>
 
-                <div className="detail-section">
+              {/* Message Section */}
+              <div className="detail-card">
+                <div className="detail-card-header">
+                  <span className="detail-icon">💬</span>
                   <h4>Message</h4>
-                  <div className="message-content">
-                    <p>{selectedReminder.message}</p>
-                  </div>
                 </div>
-
-                <div className="detail-section">
-                  <h4>Reminder Information</h4>
-                  <p><strong>Created:</strong> {formatDateTime(selectedReminder.createdAt)}</p>
-                  <p><strong>Status:</strong> {selectedReminder.isRead === 0 ? 'Unread' : 'Read'}</p>
+                <div className="message-box">
+                  <p>{selectedReminder.message}</p>
                 </div>
               </div>
 
-              <div className="modal-actions">
-                <button className="action-btn close-btn" onClick={closeViewModal}>
+              {/* Appointment Details */}
+              {selectedReminder.preferredDateTime && (
+                <div className="detail-card">
+                  <div className="detail-card-header">
+                    <span className="detail-icon">📅</span>
+                    <h4>Scheduled Appointment</h4>
+                  </div>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">Date</span>
+                      <span className="detail-value">{formatDate(selectedReminder.preferredDateTime)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Time</span>
+                      <span className="detail-value">{formatTime(selectedReminder.preferredDateTime)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Info */}
+              <div className="detail-card">
+                <div className="detail-card-header">
+                  <span className="detail-icon">ℹ️</span>
+                  <h4>Information</h4>
+                </div>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">Reminder ID</span>
+                    <span className="detail-value">#{selectedReminder.reminderId}</span>
+                  </div>
+                  {selectedReminder.appointmentId && (
+                    <div className="detail-item">
+                      <span className="detail-label">Appointment ID</span>
+                      <span className="detail-value">#{selectedReminder.appointmentId}</span>
+                    </div>
+                  )}
+                  <div className="detail-item full-width">
+                    <span className="detail-label">Created</span>
+                    <span className="detail-value">{formatDateTime(selectedReminder.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="modal-actions-modern">
+                <button className="btn-secondary" onClick={closeViewModal}>
                   Close
                 </button>
                 {selectedReminder.isRead === 0 ? (
                   <button 
-                    className="action-btn mark-read-btn"
+                    className="btn-primary"
                     onClick={() => {
                       handleMarkAsRead(selectedReminder.reminderId);
                       closeViewModal();
                     }}
                   >
+                    <span>✓</span>
                     Mark as Read
                   </button>
                 ) : (
                   <button 
-                    className="action-btn mark-unread-btn"
+                    className="btn-primary secondary"
                     onClick={() => {
                       handleMarkAsUnread(selectedReminder.reminderId);
                       closeViewModal();
                     }}
                   >
+                    <span>○</span>
                     Mark as Unread
                   </button>
                 )}

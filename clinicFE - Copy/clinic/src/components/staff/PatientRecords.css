@@ -112,16 +112,23 @@
 .search-input {
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 2px solid #ddd;
+  border: 2px solid #000000 !important;
   border-radius: 8px;
   font-size: 1rem;
-  background: white;
-  transition: border-color 0.3s;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #2c5530;
+  border-color: #2c5530 !important;
+  box-shadow: 0 0 0 3px rgba(44, 85, 48, 0.2);
+}
+
+.search-input::placeholder {
+  color: rgba(0, 0, 0, 0.4) !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.4) !important;
 }
 
 .message {
@@ -131,7 +138,7 @@
   text-align: center;
   font-weight: 500;
 }
-
+  
 .message.success {
   background-color: #d4edda;
   color: #155724;

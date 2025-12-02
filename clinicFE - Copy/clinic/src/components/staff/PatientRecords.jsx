@@ -203,6 +203,16 @@ const PatientRecords = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
+            style={{
+              border: '2px solid #000000',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              width: '100%',
+              '--placeholder-color': 'rgba(0, 0, 0, 0.5)'
+            }}
           />
         </div>
       </div>
