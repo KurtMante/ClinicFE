@@ -179,116 +179,141 @@ const LoginModal = ({ isOpen, onClose, onNavigate, onOpenStaffLogin, onOpenAdmin
       <div className="login-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
 
-        <div className="modal-header">
-          <h2>{showForgot ? 'FIND YOUR ACCOUNT' : 'PATIENT LOGIN'}</h2>
-        </div>
-
-        <div className="modal-body">
-          {!showForgot && message && (
-            <div className={`message ${message.includes('successful') ? 'success' : 'error'}`}>
-              {message}
+        {/* New: Two-column layout */}
+        <div className="modal-content-wrapper">
+          {/* Column 1: Branding */}
+          <div className="modal-branding">
+            <div className="branding-content">
+              <div className="branding-logo">🏥</div>
+              <h3>Wahing Medical Clinic</h3>
+              <p>Your health, our priority. Access your patient portal.</p>
             </div>
-          )}
+          </div>
 
-            {showForgot ? (
-              <form onSubmit={handleForgotSubmit} noValidate>
-                {forgotStatus.text && (
-                  <div className={`message ${forgotStatus.type === 'error' ? 'error' : 'success'}`}>
-                    {forgotStatus.text}
-                  </div>
-                )}
-                <div className="form-group">
-                  <div className="input-container">
-                    <input
-                      type="email"
-                      name="forgotEmail"
-                      placeholder="Enter your email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      disabled={forgotLoading}
-                    />
-                  </div>
-                </div>
-                <button type="submit" disabled={forgotLoading} className="login-btn">
-                  {forgotLoading ? 'SENDING...' : 'SEND RESET LINK'}
-                </button>
-                <button type="button" className="register-btn" onClick={handleBackToLogin} disabled={forgotLoading}>
-                  BACK TO LOGIN
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <div className="input-container">
-                    <input
-                      type="text"
-                      name="username"
-                      placeholder="Email"
-                      value={formData.username}
-                      onChange={handleChange}
-                      className={errors.username ? 'error' : ''}
-                    />
-                  </div>
-                  {errors.username && <span className="error-text">{errors.username}</span>}
-                </div>
-
-                <div className="form-group">
-                  <div className="input-container">
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className={errors.password ? 'error' : ''}
-                    />
-                  </div>
-                  {errors.password && <span className="error-text">{errors.password}</span>}
-                </div>
-
-                <div className="form-options">
-                  <label className="remember-me">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    Remember me
-                  </label>
-                  <button
-                    type="button"
-                    className="forgot-password"
-                    onClick={handleForgotPassword}
-                    disabled={isLoading}
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" disabled={isLoading} className="login-btn">
-                    {isLoading ? 'LOGGING IN...' : 'LOGIN'}
-                  </button>
-                  <button
-                    type="button"
-                    className="register-btn"
-                    onClick={handleRegister}
-                    disabled={isLoading}
-                  >
-                    REGISTER
-                  </button>
-                </div>
-              </form>
-            )}
-
-          {!showForgot && (
-            <div className="modal-footer">
-              <div className="role-buttons">
-                <button className="role-btn admin-btn" onClick={handleAdminLogin}>ADMIN</button>
-                <button className="role-btn staff-btn" onClick={handleStaffLogin}>STAFF</button>
-              </div>
+          {/* Column 2: Form */}
+          <div className="modal-form-content">
+            <div className="modal-header">
+              <h2>{showForgot ? 'Find Your Account' : 'Patient Login'}</h2>
             </div>
-          )}
+
+            <div className="modal-body">
+              {!showForgot && message && (
+                <div className={`message ${message.includes('successful') ? 'success' : 'error'}`}>
+                  {message}
+                </div>
+              )}
+
+              {showForgot ? (
+                <form onSubmit={handleForgotSubmit} noValidate>
+                  <p className="form-description">
+                    Enter your email and we'll send you a link to get back into your account.
+                  </p>
+                  {forgotStatus.text && (
+                    <div className={`message ${forgotStatus.type === 'error' ? 'error' : 'success'}`}>
+                      {forgotStatus.text}
+                    </div>
+                  )}
+                  <div className="form-group">
+                    <div className="input-container">
+                      <input
+                        type="email"
+                        name="forgotEmail"
+                        placeholder="Enter your email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        disabled={forgotLoading}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-actions">
+                    <button type="submit" disabled={forgotLoading} className="login-btn">
+                      {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
+                    <button type="button" className="register-btn" onClick={handleBackToLogin} disabled={forgotLoading}>
+                      Back to Login
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <div className="input-container">
+                      <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        placeholder=" "
+                        value={formData.username}
+                        onChange={handleChange}
+                        className={errors.username ? 'error' : ''}
+                      />
+                      <label htmlFor="username">Email</label>
+                    </div>
+                    {errors.username && <span className="error-text">{errors.username}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <div className="input-container">
+                      <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder=" "
+                        value={formData.password}
+                        onChange={handleChange}
+                        className={errors.password ? 'error' : ''}
+                      />
+                      <label htmlFor="password">Password</label>
+                    </div>
+                    {errors.password && <span className="error-text">{errors.password}</span>}
+                  </div>
+
+                  <div className="form-options">
+                    <label className="remember-me">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                      />
+                      Remember me
+                    </label>
+                    <button
+                      type="button"
+                      className="forgot-password"
+                      onClick={handleForgotPassword}
+                      disabled={isLoading}
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="submit" disabled={isLoading} className="login-btn">
+                      {isLoading ? 'Logging In...' : 'Login'}
+                    </button>
+                    <button
+                      type="button"
+                      className="register-btn"
+                      onClick={handleRegister}
+                      disabled={isLoading}
+                    >
+                      Register
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {!showForgot && (
+                <div className="modal-footer">
+                  <p className="footer-title">Are you clinic personnel?</p>
+                  <div className="role-buttons">
+                    <button className="role-btn" onClick={handleAdminLogin}>Admin Login</button>
+                    <button className="role-btn" onClick={handleStaffLogin}>Staff Login</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

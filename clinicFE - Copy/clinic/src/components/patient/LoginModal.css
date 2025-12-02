@@ -1,157 +1,221 @@
+/* --- Base Modal Styles --- */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgba(10, 20, 30, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .login-modal {
-  background: linear-gradient(135deg, #6B8E23, #8FBC8F);
-  border-radius: 15px;
   width: 90%;
-  max-width: 400px;
+  max-width: 800px;
   position: relative;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  animation: modalFadeIn 0.3s ease-out;
+  animation: slideUp 0.4s ease-out;
 }
 
-@keyframes modalFadeIn {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: scale(0.9) translateY(-20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
   }
 }
 
 .modal-close {
   position: absolute;
-  top: 15px;
-  right: 20px;
-  background: none;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.1);
   border: none;
-  font-size: 24px;
-  color: white;
+  font-size: 20px;
+  color: #555;
   cursor: pointer;
   z-index: 10;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  color: #111;
 }
 
-.modal-header {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 20px;
+/* --- Two-Column Layout --- */
+.modal-content-wrapper {
+  display: flex;
+  background: #ffffff;
+}
+
+.modal-branding {
+  flex: 1;
+  background: linear-gradient(160deg, #2a6f97, #014f86);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
   text-align: center;
-  border-radius: 15px 15px 0 0;
+}
+
+.branding-content .branding-logo {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+
+.branding-content h3 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.branding-content p {
+  font-size: 15px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.modal-form-content {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* --- Form Content & Body --- */
+.modal-header {
+  padding: 30px 40px 0;
+  text-align: left;
 }
 
 .modal-header h2 {
-  color: #6B8E23;
-  font-size: 24px;
-  font-weight: bold;
+  color: #012a4a;
+  font-size: 26px;
+  font-weight: 700;
   margin: 0;
-  letter-spacing: 1px;
 }
 
 .modal-body {
-  padding: 30px;
-  color: white;
+  padding: 24px 40px 30px;
 }
 
+.form-description {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+/* --- Messages & Errors --- */
 .message {
-  padding: 10px;
-  border-radius: 5px;
+  padding: 12px;
+  border-radius: 6px;
   margin-bottom: 20px;
   text-align: center;
   font-weight: 500;
+  font-size: 14px;
 }
 
 .message.success {
-  background: rgba(255, 255, 255, 0.2);
-  color: #90EE90;
-  border: 1px solid #90EE90;
+  background: #e0f2f1;
+  color: #00796b;
 }
 
 .message.error {
-  background: rgba(255, 0, 0, 0.2);
-  color: #FFB6C1;
-  border: 1px solid #FFB6C1;
+  background: #ffebee;
+  color: #c62828;
 }
 
+.error-text {
+  color: #c62828;
+  font-size: 13px;
+  margin-top: 6px;
+  display: block;
+}
+
+/* --- Form Elements --- */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  position: relative;
 }
 
 .input-container {
   position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 15px;
-  font-size: 18px;
-  z-index: 1;
-  color: #666;
 }
 
 .input-container input {
   width: 100%;
-  padding: 15px 20px;
-  border: none;
-  border-radius: 25px;
+  padding: 14px 16px;
+  border: 1px solid #999;
+  border-radius: 6px;
   font-size: 16px;
-  background: rgba(255, 255, 255, 0.95);
+  background: transparent;
   color: #333;
   box-sizing: border-box;
-  transition: all 0.3s;
+  transition: all 0.2s;
+}
+
+.input-container label {
+  position: absolute;
+  top: 15px;
+  left: 16px;
+  font-size: 16px;
+  color: #666;
+  pointer-events: none;
+  transition: all 0.2s ease;
 }
 
 .input-container input:focus {
   outline: none;
+  border-color: #014f86;
   background: white;
-  color: #333;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(1, 79, 134, 0.1);
+}
+
+.input-container input:focus + label,
+.input-container input:not(:placeholder-shown) + label {
+  top: -10px;
+  left: 12px;
+  font-size: 12px;
+  color: #014f86;
+  background-color: #ffffff;
+  padding: 0 4px;
 }
 
 .input-container input.error {
-  border: 2px solid #ff6b6b;
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
+  border-color: #c62828;
+  background: #ffebee;
+}
+
+.input-container input.error + label {
+  color: #c62828;
 }
 
 .input-container input::placeholder {
-  color: #666;
+  color: transparent;
 }
 
-.error-text {
-  color: #FFB6C1;
-  font-size: 12px;
-  margin-top: 5px;
-  display: block;
-  margin-left: 15px;
-}
-
+/* --- Form Options & Actions --- */
 .form-options {
   display: flex;
   justify-content: space-between;
@@ -165,208 +229,128 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.9);
+  color: #555;
 }
 
 .remember-me input {
   margin: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .forgot-password {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: #014f86;
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
   font-size: 14px;
+  font-weight: 500;
   padding: 0;
 }
 
 .forgot-password:hover {
-  color: white;
+  text-decoration: underline;
+}
+
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center buttons horizontally */
+  gap: 12px;
 }
 
 .login-btn, .register-btn {
-  width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 25px;
+  width: 100%; /* Make buttons take full width of their container */
+  max-width: 350px; /* Set a max-width for the buttons */
+  padding: 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   font-size: 16px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
-  margin-bottom: 15px;
-  transition: all 0.3s;
+  transition: all 0.2s;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 .login-btn {
-  background: white;
-  color: #6B8E23;
+  background: #014f86;
+  color: white;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: #f0f0f0;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  background: #013a63;
 }
 
 .login-btn:disabled {
-  background: #ccc;
-  color: #666;
+  background: #a9a9a9;
   cursor: not-allowed;
-  transform: none;
 }
 
 .register-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: #4a7c59;
   color: white;
-  border: 2px solid white;
+  border-color: transparent;
 }
 
-.register-btn:hover {
-  background: white;
-  color: #6B8E23;
-  transform: translateY(-2px);
+.register-btn:hover:not(:disabled) {
+  background: #3a6347;
+  border-color: transparent;
 }
 
+/* --- Footer & Role Buttons --- */
 .modal-footer {
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.footer-title {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
 }
 
 .role-buttons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 15px;
 }
 
 .role-btn {
   flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 20px;
+  max-width: 150px;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.admin-btn {
-  background: rgba(255, 255, 255, 0.9);
+  background: #f8f9fa;
   color: #333;
-}
-
-.staff-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
+  transition: all 0.2s;
 }
 
 .role-btn:hover {
-  background: white;
-  transform: translateY(-2px);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  background: #e9ecef;
+  border-color: #adb5bd;
 }
 
-/* Force text visibility in modal with highest specificity */
-.login-modal * {
-  color: #1f2937 !important;
-}
-
-.login-modal input,
-.login-modal textarea,
-.login-modal select {
-  color: #1f2937 !important;
-  background-color: white !important;
-  -webkit-text-fill-color: #1f2937 !important; /* For Safari */
-}
-
-.login-modal input:focus,
-.login-modal textarea:focus,
-.login-modal select:focus {
-  color: #1f2937 !important;
-  background-color: white !important;
-  -webkit-text-fill-color: #1f2937 !important;
-}
-
-.login-modal input::placeholder,
-.login-modal textarea::placeholder {
-  color: #9ca3af !important;
-  -webkit-text-fill-color: #9ca3af !important;
-}
-
-.login-modal label {
-  color: #333 !important;
-}
-
-.login-modal p {
-  color: #333 !important;
-}
-
-.login-modal h2,
-.login-modal h3,
-.login-modal h4 {
-  color: #333 !important;
-}
-
-.login-modal .form-actions {
-  display: flex;
-  flex-direction: column; /* stack vertically */
-  gap: 12px;
-  width: 100%;
-}
-
-.login-modal .form-actions .login-btn,
-.login-modal .form-actions .register-btn {
-  width: 100%;
-  height: 52px;
-  border-radius: 26px;
-  margin: 0;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  box-sizing: border-box;       /* include border in width */
-  border: 2px solid transparent;/* same border thickness for both */
-}
-
-.login-modal .form-actions .login-btn {
-  background: #ffffff;
-  color: #142027;
-  border-color: #ffffff;        /* keep sizes equal to REGISTER */
-}
-
-.login-modal .form-actions .register-btn {
-  background: #214f32;          /* your green */
-  color: #eaf5ee;
-  border-color: #214f32;
-}
-
-/* Optional: hover */
-.login-modal .form-actions .login-btn:hover {
-  filter: brightness(0.98);
-}
-.login-modal .form-actions .register-btn:hover {
-  filter: brightness(1.05);
-}
-
-@media (max-width: 480px) {
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+  .modal-branding {
+    display: none; /* Hide branding column on smaller screens */
+  }
+  .modal-form-content {
+    flex: 1;
+  }
   .login-modal {
-    width: 95%;
-    margin: 10px;
+    max-width: 420px;
   }
-  
-  .modal-body {
-    padding: 20px;
-  }
-  
-  .role-buttons {
-    flex-direction: column;
-    gap: 10px;
+  .modal-header, .modal-body {
+    padding: 25px;
   }
 }
