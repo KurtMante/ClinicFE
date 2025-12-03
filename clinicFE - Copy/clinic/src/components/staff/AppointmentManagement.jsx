@@ -22,6 +22,13 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     symptom: ''
   });
 
+  // Reminder states
+  const [remindingAppointments, setRemindingAppointments] = useState([]);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [reminderPatient, setReminderPatient] = useState(null);
+  const [reminderSent, setReminderSent] = useState(false);
+
   useEffect(() => {
     fetchAppointments();
     fetchAcceptedAppointments();
@@ -142,6 +149,16 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient';
   };
 
+  const getPatientEmail = (patientId) => {
+    const patient = patients.find(p => p.patientId === patientId);
+    return patient ? patient.email : null;
+  };
+
+  const getPatientPhone = (patientId) => {
+    const patient = patients.find(p => p.patientId === patientId);
+    return patient ? patient.phone : null;
+  };
+
   const getServiceName = (serviceId) => {
     const service = services.find(s => s.serviceId === serviceId);
     return service ? service.serviceName : 'Unknown Service';
@@ -221,6 +238,110 @@ const AppointmentManagement = ({ isAdminView = false }) => {
       setMessage('Network error. Please try again.');
       console.error('Error:', error);
     }
+  };
+
+  const handleRemindPatient = async (appointment) => {
+    const appointmentId = appointment.appointmentId || appointment.acceptedAppointmentId;
+    
+    // Prevent multiple clicks
+    if (remindingAppointments.includes(appointmentId)) {
+      return;
+    }
+
+    const patientName = getPatientName(appointment.patientId);
+    const patientEmail = getPatientEmail(appointment.patientId);
+    const patientPhone = getPatientPhone(appointment.patientId);
+    const serviceName = getServiceName(appointment.serviceId);
+    const appointmentDate = new Date(appointment.preferredDateTime).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const appointmentTime = new Date(appointment.preferredDateTime).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Create automatic reminder message
+    const autoMessage = `Dear ${patientName},
+
+This is a friendly reminder about your upcoming appointment.
+
+📅 Date: ${appointmentDate}
+⏰ Time: ${appointmentTime}
+🏥 Service: ${serviceName}
+
+Please arrive 10-15 minutes before your scheduled time. If you need to reschedule or cancel, please contact us as soon as possible.
+
+Thank you for choosing our clinic!
+
+Best regards,
+Clinic Management Team`;
+
+    // Set reminder details and open modal
+    setReminderPatient({
+      name: patientName,
+      email: patientEmail,
+      phone: patientPhone,
+      serviceName: serviceName,
+      date: appointmentDate,
+      time: appointmentTime
+    });
+    setReminderMessage(autoMessage);
+    setReminderSent(false);
+
+    // Add to reminding state
+    setRemindingAppointments(prev => [...prev, appointmentId]);
+
+    try {
+      // Create reminder in database using ReminderController
+      const response = await fetch('http://localhost:3000/api/reminders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientId: appointment.patientId,
+          appointmentId: appointmentId,
+          serviceId: appointment.serviceId,
+          serviceName: serviceName,
+          message: autoMessage,
+          preferredDateTime: appointment.preferredDateTime,
+          isRead: 0
+        })
+      });
+
+      if (response.ok) {
+        const reminderData = await response.json();
+        console.log('Reminder created:', reminderData);
+        setMessage(`Reminder sent successfully to ${patientName}`);
+        setReminderSent(true);
+        setIsReminderModalOpen(true);
+      } else {
+        const data = await response.json();
+        setMessage(data.error || 'Failed to send reminder');
+        setReminderSent(false);
+        setIsReminderModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      setMessage('Failed to send reminder. Please try again.');
+      setReminderSent(false);
+      setIsReminderModalOpen(true);
+    } finally {
+      // Remove from reminding state after 2 seconds
+      setTimeout(() => {
+        setRemindingAppointments(prev => prev.filter(id => id !== appointmentId));
+      }, 2000);
+    }
+  };
+
+  const closeReminderModal = () => {
+    setIsReminderModalOpen(false);
+    setReminderMessage('');
+    setReminderPatient(null);
+    setReminderSent(false);
   };
 
   const handleRescheduleClick = (appointment) => {
@@ -360,7 +481,7 @@ const AppointmentManagement = ({ isAdminView = false }) => {
       </div>
 
       {message && (
-        <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div className={`message ${message.includes('successfully') || message.includes('Reminder sent') ? 'success' : 'error'}`}>
           {message}
         </div>
       )}
@@ -499,13 +620,23 @@ const AppointmentManagement = ({ isAdminView = false }) => {
                           <td>
                             <div className="action-buttons">
                               {appointment.isAttended === 0 ? (
-                                <button 
-                                  className="action-btn attend-btn"
-                                  onClick={() => handleMarkAsAttended(appointment.acceptedAppointmentId)}
-                                  title="Mark as Attended"
-                                >
-                                  MARK ATTENDED
-                                </button>
+                                <>
+                                  <button 
+                                    className="action-btn attend-btn"
+                                    onClick={() => handleMarkAsAttended(appointment.acceptedAppointmentId)}
+                                    title="Mark as Attended"
+                                  >
+                                    MARK ATTENDED
+                                  </button>
+                                  <button 
+                                    className={`action-btn remind-btn ${remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'reminding' : ''}`}
+                                    onClick={() => handleRemindPatient(appointment)}
+                                    title="Send Reminder"
+                                    disabled={remindingAppointments.includes(appointment.acceptedAppointmentId)}
+                                  >
+                                    {remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'SENDING...' : 'REMIND'}
+                                  </button>
+                                </>
                               ) : (
                                 <span className="action-completed">COMPLETED</span>
                               )}
@@ -571,6 +702,78 @@ const AppointmentManagement = ({ isAdminView = false }) => {
                   Update Appointment
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reminder Modal */}
+      {isReminderModalOpen && reminderPatient && (
+        <div className="modal-overlay" onClick={closeReminderModal}>
+          <div className="reminder-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeReminderModal}>×</button>
+            
+            <div className={`reminder-modal-header ${reminderSent ? 'success' : 'error'}`}>
+              <div className="reminder-icon">{reminderSent ? '✅' : '❌'}</div>
+              <h3>{reminderSent ? 'Reminder Sent Successfully!' : 'Failed to Send Reminder'}</h3>
+            </div>
+
+            <div className="reminder-modal-body">
+              <div className="reminder-recipient">
+                <h4>Patient Information:</h4>
+                <div className="recipient-details">
+                  <p><strong>👤 Name:</strong> {reminderPatient.name}</p>
+                  {reminderPatient.email && <p><strong>📧 Email:</strong> {reminderPatient.email}</p>}
+                  {reminderPatient.phone && <p><strong>📱 Phone:</strong> {reminderPatient.phone}</p>}
+                </div>
+              </div>
+
+              <div className="reminder-appointment-details">
+                <h4>Appointment Details:</h4>
+                <div className="appointment-info-cards">
+                  <div className="info-card">
+                    <span className="info-icon">📅</span>
+                    <div className="info-content">
+                      <span className="info-label">Date</span>
+                      <span className="info-value">{reminderPatient.date}</span>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <span className="info-icon">⏰</span>
+                    <div className="info-content">
+                      <span className="info-label">Time</span>
+                      <span className="info-value">{reminderPatient.time}</span>
+                    </div>
+                  </div>
+                  <div className="info-card">
+                    <span className="info-icon">🏥</span>
+                    <div className="info-content">
+                      <span className="info-label">Service</span>
+                      <span className="info-value">{reminderPatient.serviceName}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="reminder-message-preview">
+                <h4>Message Sent to Patient:</h4>
+                <div className="message-box">
+                  <pre>{reminderMessage}</pre>
+                </div>
+              </div>
+
+              {reminderSent && (
+                <div className="reminder-success-note">
+                  <span>💡</span>
+                  <p>This reminder has been saved and the patient can view it in their <strong>Reminders</strong> section.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="reminder-modal-footer">
+              <button className="action-btn confirm-btn" onClick={closeReminderModal}>
+                Done
+              </button>
             </div>
           </div>
         </div>
