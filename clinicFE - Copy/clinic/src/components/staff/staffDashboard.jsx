@@ -32,8 +32,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     email: '',
     phone: '',
     dateOfBirth: '',
-    serviceId: '', // Add service selection
-    symptom: '', // Add symptom/reason field
+    serviceId: '',
+    symptom: '',
+    appointmentDate: '',
+    appointmentTime: '',
     emergencyContactName: '',
     emergencyContactRelationship: '',
     emergencyContactPhone1: '',
@@ -212,9 +214,30 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     onNavigate('home');
   };
 
+  // Get current date and time for default values
+  const getCurrentDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  };
+
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toTimeString().slice(0, 5);
+  };
+
+  const getMinDate = () => {
+    return getCurrentDate();
+  };
+
   const openWalkInModal = () => {
     setIsWalkInModalOpen(true);
     setWalkInMessage('');
+    // Set default date and time to current
+    setWalkInFormData(prev => ({
+      ...prev,
+      appointmentDate: getCurrentDate(),
+      appointmentTime: getCurrentTime()
+    }));
   };
 
   const closeWalkInModal = () => {
@@ -227,6 +250,8 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       dateOfBirth: '',
       serviceId: '',
       symptom: '',
+      appointmentDate: '',
+      appointmentTime: '',
       emergencyContactName: '',
       emergencyContactRelationship: '',
       emergencyContactPhone1: '',
@@ -250,8 +275,9 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     // Basic validation
     if (!walkInFormData.firstName.trim() || !walkInFormData.lastName.trim() || 
         !walkInFormData.phone.trim() || !walkInFormData.dateOfBirth || 
-        !walkInFormData.serviceId) {
-      setWalkInMessage('Please fill in all required fields including service selection');
+        !walkInFormData.serviceId || !walkInFormData.appointmentDate || 
+        !walkInFormData.appointmentTime) {
+      setWalkInMessage('Please fill in all required fields including date and time');
       return;
     }
 
@@ -291,20 +317,14 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       const patientData = await patientResponse.json();
 
       if (patientResponse.ok) {
-        // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
-        const now = new Date();
-        const mysqlDateTime = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0') + ' ' +
-          String(now.getHours()).padStart(2, '0') + ':' +
-          String(now.getMinutes()).padStart(2, '0') + ':' +
-          String(now.getSeconds()).padStart(2, '0');
+        // Combine date and time into MySQL datetime format
+        const appointmentDateTime = `${walkInFormData.appointmentDate} ${walkInFormData.appointmentTime}:00`;
 
         // Now create an appointment for the walk-in patient
         const appointmentData = {
           patientId: patientData.patientId,
           serviceId: parseInt(walkInFormData.serviceId),
-          preferredDateTime: mysqlDateTime,
+          preferredDateTime: appointmentDateTime,
           symptom: walkInFormData.symptom || 'Walk-in consultation',
           status: 'Pending',
           isWalkIn: true  // Flag to identify walk-in appointments
@@ -320,7 +340,18 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
 
         if (appointmentResponse.ok) {
           const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
-          setWalkInMessage(`Walk-in patient registered successfully!\nService: ${selectedService?.serviceName || 'Unknown'}\nTemporary password: ${tempPassword}`);
+          const formattedDate = new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          const formattedTime = new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          setWalkInMessage(`Walk-in patient registered successfully!\n\n📅 Date: ${formattedDate}\n⏰ Time: ${formattedTime}\n🩺 Service: ${selectedService?.serviceName || 'Unknown'}\n🔑 Temporary password: ${tempPassword}`);
         } else {
           const errorData = await appointmentResponse.json();
           setWalkInMessage(`Patient registered but appointment creation failed: ${errorData.error || 'Unknown error'}. Temporary password: ${tempPassword}`);
@@ -333,7 +364,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         // Clear form after successful registration
         setTimeout(() => {
           closeWalkInModal();
-        }, 4000);
+        }, 5000);
       } else {
         setWalkInMessage(patientData.error || 'Failed to register walk-in patient');
       }
@@ -589,18 +620,15 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                   <table className="patients-table">
                     <thead>
                       <tr>
-                        
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Email</th>
                         <th>Registered On</th>
-                        
                       </tr>
                     </thead>
                     <tbody>
                       {walkInPatients.map((patient) => (
                         <tr key={patient.patientId}>
-                          
                           <td>
                             <div className="patient-name">
                               {patient.firstName} {patient.lastName}
@@ -613,7 +641,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                             </div>
                           </td>
                           <td>{formatDateTime(patient.createdAt)}</td>
-                          
                         </tr>
                       ))}
                     </tbody>
@@ -654,7 +681,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
             <div className="modal-body">
               {walkInMessage && (
                 <div className={`message ${walkInMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  {walkInMessage}
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{walkInMessage}</pre>
                 </div>
               )}
 
@@ -728,6 +755,58 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                       placeholder="patient@email.com"
                     />
                   </div>
+                </div>
+
+                {/* Appointment Date & Time Section */}
+                <div className="form-section">
+                  <h4>📅 Appointment Schedule</h4>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="walkInAppointmentDate">Appointment Date *</label>
+                      <input
+                        type="date"
+                        id="walkInAppointmentDate"
+                        name="appointmentDate"
+                        value={walkInFormData.appointmentDate}
+                        onChange={handleWalkInInputChange}
+                        min={getMinDate()}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="walkInAppointmentTime">Appointment Time *</label>
+                      <input
+                        type="time"
+                        id="walkInAppointmentTime"
+                        name="appointmentTime"
+                        value={walkInFormData.appointmentTime}
+                        onChange={handleWalkInInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {walkInFormData.appointmentDate && walkInFormData.appointmentTime && (
+                    <div className="appointment-preview">
+                      <span className="preview-icon">🗓️</span>
+                      <div className="preview-content">
+                        <span className="preview-label">Scheduled for:</span>
+                        <span className="preview-value">
+                          {new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })} at {new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Service Selection Section */}

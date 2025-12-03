@@ -337,10 +337,15 @@
 }
 
 .form-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: #2c5530;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e8f5e9;
 }
 
 .form-row {
@@ -368,6 +373,22 @@
   font-size: 0.9rem;
   transition: border-color 0.3s;
   font-family: inherit;
+}
+
+input[type="time"] {
+  padding: 0.75rem 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #333;
+  background-color: white;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input[type="time"]:focus {
+  outline: none;
+  border-color: #2c5530;
+  box-shadow: 0 0 0 3px rgba(44, 85, 48, 0.1);
 }
 
 .form-group input:focus {
@@ -551,6 +572,41 @@
 
 .status-badge.walk-in {
   background: #e8f5e9;
+  color: #2c5530;
+}
+
+/* Appointment Preview */
+.appointment-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 1px solid #a5d6a7;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 0.75rem;
+}
+
+.appointment-preview .preview-icon {
+  font-size: 1.5rem;
+}
+
+.appointment-preview .preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.appointment-preview .preview-label {
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.appointment-preview .preview-value {
+  font-size: 0.95rem;
+  font-weight: 600;
   color: #2c5530;
 }
 
