@@ -233,18 +233,22 @@ const AppointmentManagement = ({ isAdminView = false }) => {
   };
 
   const handleRescheduleSubmit = async () => {
-    if (!rescheduleData.preferredDateTime || !rescheduleData.symptom.trim()) {
-      setMessage('Please fill in all required fields');
+    if (!rescheduleData.preferredDateTime) {
+      setMessage('Please select a new date and time');
       return;
     }
 
     try {
+      // Only send the preferredDateTime, keep the original symptom
       const response = await fetch(`http://localhost:3000/api/appointments/${selectedAppointment.appointmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(rescheduleData)
+        body: JSON.stringify({
+          preferredDateTime: rescheduleData.preferredDateTime,
+          symptom: selectedAppointment.symptom // Keep original symptom
+        })
       });
 
       if (response.ok) {
@@ -545,16 +549,18 @@ const AppointmentManagement = ({ isAdminView = false }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="rescheduleSymptom">Symptoms / Reason *</label>
+                <label htmlFor="rescheduleSymptom">Symptoms / Reason</label>
                 <textarea
                   id="rescheduleSymptom"
                   name="symptom"
                   value={rescheduleData.symptom}
                   onChange={handleRescheduleInputChange}
-                  placeholder="Update symptoms or reason for visit..."
+                  placeholder="Symptoms or reason for visit..."
                   rows="4"
-                  required
+                  disabled
+                  className="disabled-input"
                 />
+                <span className="input-note">Symptoms cannot be modified when rescheduling</span>
               </div>
 
               <div className="modal-actions">

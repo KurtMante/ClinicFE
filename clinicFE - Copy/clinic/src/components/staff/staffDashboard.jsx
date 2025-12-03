@@ -32,6 +32,8 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     email: '',
     phone: '',
     dateOfBirth: '',
+    serviceId: '', // Add service selection
+    symptom: '', // Add symptom/reason field
     emergencyContactName: '',
     emergencyContactRelationship: '',
     emergencyContactPhone1: '',
@@ -223,6 +225,8 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       email: '',
       phone: '',
       dateOfBirth: '',
+      serviceId: '',
+      symptom: '',
       emergencyContactName: '',
       emergencyContactRelationship: '',
       emergencyContactPhone1: '',
@@ -245,8 +249,9 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   const handleWalkInRegistration = async () => {
     // Basic validation
     if (!walkInFormData.firstName.trim() || !walkInFormData.lastName.trim() || 
-        !walkInFormData.phone.trim() || !walkInFormData.dateOfBirth) {
-      setWalkInMessage('Please fill in all required fields');
+        !walkInFormData.phone.trim() || !walkInFormData.dateOfBirth || 
+        !walkInFormData.serviceId) {
+      setWalkInMessage('Please fill in all required fields including service selection');
       return;
     }
 
@@ -258,14 +263,24 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       const tempPassword = `walkin${Date.now().toString().slice(-4)}`;
       
       const registrationData = {
-        ...walkInFormData,
+        firstName: walkInFormData.firstName,
+        lastName: walkInFormData.lastName,
+        email: walkInFormData.email || `${walkInFormData.firstName.toLowerCase()}.${walkInFormData.lastName.toLowerCase()}@walkin.temp`,
+        phone: walkInFormData.phone,
+        dateOfBirth: walkInFormData.dateOfBirth,
         password: tempPassword,
-        role: 'Walkin', // Override role to 'Walkin' for walk-in patients
-        // Set default email if not provided
-        email: walkInFormData.email || `${walkInFormData.firstName.toLowerCase()}.${walkInFormData.lastName.toLowerCase()}@walkin.temp`
+        role: 'Walkin',
+        emergencyContactName: walkInFormData.emergencyContactName,
+        emergencyContactRelationship: walkInFormData.emergencyContactRelationship,
+        emergencyContactPhone1: walkInFormData.emergencyContactPhone1,
+        emergencyContactPhone2: walkInFormData.emergencyContactPhone2,
+        streetAddress: walkInFormData.streetAddress,
+        barangay: walkInFormData.barangay,
+        municipality: walkInFormData.municipality
       };
 
-      const response = await fetch('http://localhost:3000/api/patients', {
+      // First, register the patient
+      const patientResponse = await fetch('http://localhost:3000/api/patients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,19 +288,54 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         body: JSON.stringify(registrationData),
       });
 
-      const data = await response.json();
+      const patientData = await patientResponse.json();
 
-      if (response.ok) {
-        setWalkInMessage(`Walk-in patient registered successfully! Temporary password: ${tempPassword}`);
-        // Refresh walk-in patients data
+      if (patientResponse.ok) {
+        // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
+        const now = new Date();
+        const mysqlDateTime = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0') + ' ' +
+          String(now.getHours()).padStart(2, '0') + ':' +
+          String(now.getMinutes()).padStart(2, '0') + ':' +
+          String(now.getSeconds()).padStart(2, '0');
+
+        // Now create an appointment for the walk-in patient
+        const appointmentData = {
+          patientId: patientData.patientId,
+          serviceId: parseInt(walkInFormData.serviceId),
+          preferredDateTime: mysqlDateTime,
+          symptom: walkInFormData.symptom || 'Walk-in consultation',
+          status: 'Pending',
+          isWalkIn: true  // Flag to identify walk-in appointments
+        };
+
+        const appointmentResponse = await fetch('http://localhost:3000/api/appointments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(appointmentData),
+        });
+
+        if (appointmentResponse.ok) {
+          const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
+          setWalkInMessage(`Walk-in patient registered successfully!\nService: ${selectedService?.serviceName || 'Unknown'}\nTemporary password: ${tempPassword}`);
+        } else {
+          const errorData = await appointmentResponse.json();
+          setWalkInMessage(`Patient registered but appointment creation failed: ${errorData.error || 'Unknown error'}. Temporary password: ${tempPassword}`);
+        }
+
+        // Refresh data
         fetchWalkInPatients();
+        fetchAppointments();
         
         // Clear form after successful registration
         setTimeout(() => {
           closeWalkInModal();
-        }, 3000);
+        }, 4000);
       } else {
-        setWalkInMessage(data.error || 'Failed to register walk-in patient');
+        setWalkInMessage(patientData.error || 'Failed to register walk-in patient');
       }
     } catch (error) {
       setWalkInMessage('Unable to register patient. Please try again later.');
@@ -676,6 +726,61 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                       value={walkInFormData.email}
                       onChange={handleWalkInInputChange}
                       placeholder="patient@email.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Service Selection Section */}
+                <div className="form-section">
+                  <h4>Service Selection</h4>
+                  
+                  <div className="form-group">
+                    <label htmlFor="walkInService">Select Service *</label>
+                    <select
+                      id="walkInService"
+                      name="serviceId"
+                      value={walkInFormData.serviceId}
+                      onChange={handleWalkInInputChange}
+                      required
+                      className="service-select"
+                    >
+                      <option value="">-- Select a Service --</option>
+                      {services.map((service) => (
+                        <option key={service.serviceId} value={service.serviceId}>
+                          {service.serviceName} - ₱{service.price?.toLocaleString() || '0'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {walkInFormData.serviceId && (
+                    <div className="selected-service-info">
+                      {(() => {
+                        const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
+                        return selectedService ? (
+                          <>
+                            <div className="service-detail">
+                              <span className="service-icon">🩺</span>
+                              <div className="service-info">
+                                <strong>{selectedService.serviceName}</strong>
+                                <span className="service-price">Price: ₱{selectedService.price?.toLocaleString() || '0'}</span>
+                              </div>
+                            </div>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label htmlFor="walkInSymptom">Symptoms / Reason for Visit</label>
+                    <textarea
+                      id="walkInSymptom"
+                      name="symptom"
+                      value={walkInFormData.symptom}
+                      onChange={handleWalkInInputChange}
+                      placeholder="Describe the patient's symptoms or reason for visit..."
+                      rows="3"
                     />
                   </div>
                 </div>

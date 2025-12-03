@@ -3,7 +3,6 @@ import './PatientRecords.css';
 
 const PatientRecords = () => {
   const [attendedAppointments, setAttendedAppointments] = useState([]);
-  const [filteredRecords, setFilteredRecords] = useState([]);
   const [patients, setPatients] = useState([]);
   const [services, setServices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,17 +11,14 @@ const PatientRecords = () => {
 
   // Modal states
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientHistory, setPatientHistory] = useState([]);
 
   useEffect(() => {
     fetchAttendedAppointments();
     fetchPatients();
     fetchServices();
   }, []);
-
-  useEffect(() => {
-    filterRecords();
-  }, [attendedAppointments, patients, services, searchTerm]);
 
   const fetchAttendedAppointments = async () => {
     setIsLoading(true);
@@ -66,25 +62,41 @@ const PatientRecords = () => {
     }
   };
 
-  const filterRecords = () => {
-    if (!patients.length || !services.length) return;
-
-    let filtered = attendedAppointments.filter(record => {
-      const patientName = getPatientName(record.patientId).toLowerCase();
-      const patientEmail = getPatientEmail(record.patientId).toLowerCase();
-      const serviceName = getServiceName(record.serviceId).toLowerCase();
-      const search = searchTerm.toLowerCase();
+  // Get unique patients who have attended appointments
+  const getUniquePatients = () => {
+    const patientIds = [...new Set(attendedAppointments.map(record => record.patientId))];
+    
+    return patientIds.map(patientId => {
+      const patient = patients.find(p => p.patientId === patientId);
+      const patientRecords = attendedAppointments.filter(r => r.patientId === patientId);
+      const lastVisit = patientRecords.reduce((latest, record) => {
+        return new Date(record.preferredDateTime) > new Date(latest.preferredDateTime) ? record : latest;
+      }, patientRecords[0]);
       
-      return patientName.includes(search) || 
-             patientEmail.includes(search) ||
-             serviceName.includes(search) ||
-             record.symptom.toLowerCase().includes(search);
+      return {
+        ...patient,
+        patientId,
+        totalVisits: patientRecords.length,
+        lastVisitDate: lastVisit?.preferredDateTime,
+        totalSpent: patientRecords.reduce((sum, record) => sum + (getServicePrice(record.serviceId) || 0), 0)
+      };
+    }).filter(patient => patient.firstName); // Filter out patients without data
+  };
+
+  // Filter patients based on search
+  const getFilteredPatients = () => {
+    const uniquePatients = getUniquePatients();
+    
+    if (!searchTerm) return uniquePatients;
+    
+    const search = searchTerm.toLowerCase();
+    return uniquePatients.filter(patient => {
+      const fullName = `${patient.firstName} ${patient.lastName}`.toLowerCase();
+      const email = (patient.email || '').toLowerCase();
+      const phone = (patient.phone || '').toLowerCase();
+      
+      return fullName.includes(search) || email.includes(search) || phone.includes(search);
     });
-
-    // Sort by appointment date (most recent first)
-    filtered.sort((a, b) => new Date(b.preferredDateTime) - new Date(a.preferredDateTime));
-
-    setFilteredRecords(filtered);
   };
 
   const getPatientName = (patientId) => {
@@ -113,17 +125,23 @@ const PatientRecords = () => {
 
   const getServicePrice = (serviceId) => {
     const service = services.find(s => s.serviceId === serviceId);
-    return service ? service.price : '0';
+    return service ? parseFloat(service.price) : 0;
   };
 
-  const handleViewDetails = (record) => {
-    setSelectedRecord(record);
+  const handleViewDetails = (patient) => {
+    setSelectedPatient(patient);
+    // Get all appointment history for this patient
+    const history = attendedAppointments
+      .filter(record => record.patientId === patient.patientId)
+      .sort((a, b) => new Date(b.preferredDateTime) - new Date(a.preferredDateTime));
+    setPatientHistory(history);
     setIsDetailModalOpen(true);
   };
 
   const closeDetailModal = () => {
     setIsDetailModalOpen(false);
-    setSelectedRecord(null);
+    setSelectedPatient(null);
+    setPatientHistory([]);
   };
 
   const formatDate = (dateString) => {
@@ -173,226 +191,291 @@ const PatientRecords = () => {
   };
 
   const stats = getRecordStats();
+  const filteredPatients = getFilteredPatients();
 
   return (
-    <div className="patient-records-container">
-      <div className="records-header">
-        <div className="header-content">
+    <div className="patient-records-modern">
+      {/* Header Section */}
+      <div className="records-header-modern">
+        <div className="header-title">
           <h1>Patient Records</h1>
-          <p>View and manage completed patient appointments and medical records</p>
+          <p>View patient profiles and their complete medical history</p>
         </div>
-        
         <div className="header-stats">
-          <div className="stat-item">
-            <span className="stat-number">{stats.total}</span>
-            <span className="stat-label">Total Records</span>
+          <div className="stat-box">
+            <span className="stat-icon">👥</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.uniquePatients}</span>
+              <span className="stat-label">Patients</span>
+            </div>
           </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.thisMonth}</span>
-            <span className="stat-label">This Month</span>
+          <div className="stat-box highlight">
+            <span className="stat-icon">📋</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.total}</span>
+              <span className="stat-label">Total Visits</span>
+            </div>
           </div>
-          
+          <div className="stat-box">
+            <span className="stat-icon">📅</span>
+            <div className="stat-info">
+              <span className="stat-value">{stats.thisMonth}</span>
+              <span className="stat-label">This Month</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="records-controls">
-        <div className="search-container">
+      {/* Search Section */}
+      <div className="records-controls-modern">
+        <div className="search-box-modern">
+          <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search by patient name, email, service, or symptoms..."
+            placeholder="Search patients by name, email, or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-            style={{
-              border: '2px solid #000000',
-              backgroundColor: '#ffffff',
-              color: '#000000',
-              padding: '0.75rem 1rem',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              width: '100%',
-              '--placeholder-color': 'rgba(0, 0, 0, 0.5)'
-            }}
           />
         </div>
       </div>
 
+      {/* Message Display */}
       {message && (
-        <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
+        <div className={`message-modern ${message.includes('successfully') ? 'success' : 'error'}`}>
+          <span className="message-icon">{message.includes('successfully') ? '✓' : '⚠'}</span>
           {message}
         </div>
       )}
 
+      {/* Content */}
       {isLoading ? (
-        <div className="loading">Loading patient records...</div>
+        <div className="loading-modern">
+          <div className="loading-spinner"></div>
+          <p>Loading patient records...</p>
+        </div>
       ) : (
-        <div className="records-content">
-          {filteredRecords.length === 0 ? (
-            <div className="no-records">
-              <div className="no-records-icon">📋</div>
-              <p>No patient records found matching your criteria.</p>
+        <div className="records-content-modern">
+          {filteredPatients.length === 0 ? (
+            <div className="no-records-modern">
+              <div className="empty-illustration">
+                <span>📋</span>
+              </div>
+              <h3>No Patient Records Found</h3>
+              <p>No patients match your search criteria.</p>
             </div>
           ) : (
-            <div className="records-table-container">
-              <table className="records-table">
-                <thead>
-                  <tr>
-                    <th>Patient</th>
-                    <th>Service</th>
-                    <th>Date Attended</th>
-                    <th>Symptoms/Reason</th>
-                    <th>Price</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecords.map((record) => (
-                    <tr key={record.acceptedAppointmentId}>
-                      <td>
-                        <div className="patient-info">
-                          <span className="patient-name">{getPatientName(record.patientId)}</span>
-                          <span className="patient-email">{getPatientEmail(record.patientId)}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="service-info">
-                          <span className="service-name">{getServiceName(record.serviceId)}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="date-info">
-                          <span className="date-primary">{formatDate(record.preferredDateTime)}</span>
-                          <span className="time-secondary">
-                            {new Date(record.preferredDateTime).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="symptoms-preview">
-                          {record.symptom.length > 50 
-                            ? `${record.symptom.substring(0, 50)}...` 
-                            : record.symptom}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="price-badge">₱{getServicePrice(record.serviceId)}</span>
-                      </td>
-                      <td>
-                        <div className="action-buttons">
-                          <button 
-                            className="action-btn view-btn"
-                            onClick={() => handleViewDetails(record)}
-                            title="View Details"
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="patients-grid">
+              {filteredPatients.map((patient) => (
+                <div key={patient.patientId} className="patient-card-modern">
+                  <div className="card-header-modern">
+                    <div className="patient-avatar">
+                      <span>{patient.firstName?.[0]}{patient.lastName?.[0]}</span>
+                    </div>
+                    <div className="patient-info-modern">
+                      <h3>{patient.firstName} {patient.lastName}</h3>
+                      <span className="patient-id">Patient ID: #{patient.patientId}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="card-body-modern">
+                    <div className="info-row">
+                      <span className="info-icon">📧</span>
+                      <span className="info-text">{patient.email || 'No email'}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-icon">📱</span>
+                      <span className="info-text">{patient.phone || 'No phone'}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-icon">🎂</span>
+                      <span className="info-text">
+                        {patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} years old` : 'Age unknown'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="card-stats-modern">
+                    <div className="mini-stat">
+                      <span className="mini-stat-value">{patient.totalVisits}</span>
+                      <span className="mini-stat-label">Visits</span>
+                    </div>
+                    <div className="mini-stat">
+                      <span className="mini-stat-value">₱{patient.totalSpent?.toLocaleString()}</span>
+                      <span className="mini-stat-label">Total Spent</span>
+                    </div>
+                  </div>
+
+                  <div className="card-footer-modern">
+                    <div className="last-visit">
+                      <span className="last-visit-label">Last Visit:</span>
+                      <span className="last-visit-date">{formatDate(patient.lastVisitDate)}</span>
+                    </div>
+                    <button 
+                      className="view-history-btn"
+                      onClick={() => handleViewDetails(patient)}
+                    >
+                      <span>📋</span>
+                      View History
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* Record Detail Modal */}
-      {isDetailModalOpen && selectedRecord && (
-        <div className="modal-overlay" onClick={closeDetailModal}>
-          <div className="record-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeDetailModal}>×</button>
+      {/* Patient History Modal */}
+      {isDetailModalOpen && selectedPatient && (
+        <div className="modal-overlay-modern" onClick={closeDetailModal}>
+          <div className="patient-history-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeDetailModal}>×</button>
             
-            <div className="modal-header">
-              <h3>Patient Record Details</h3>
-              <span className="record-id">Record ID: #{selectedRecord.acceptedAppointmentId}</span>
+            {/* Modal Header */}
+            <div className="modal-header-modern">
+              <div className="modal-patient-info">
+                <div className="modal-avatar">
+                  <span>{selectedPatient.firstName?.[0]}{selectedPatient.lastName?.[0]}</span>
+                </div>
+                <div className="modal-patient-details">
+                  <h2>{selectedPatient.firstName} {selectedPatient.lastName}</h2>
+                  <p>Patient ID: #{selectedPatient.patientId}</p>
+                </div>
+              </div>
+              <div className="modal-stats">
+                <div className="modal-stat">
+                  <span className="modal-stat-value">{patientHistory.length}</span>
+                  <span className="modal-stat-label">Total Visits</span>
+                </div>
+                <div className="modal-stat">
+                  <span className="modal-stat-value">
+                    ₱{patientHistory.reduce((sum, r) => sum + getServicePrice(r.serviceId), 0).toLocaleString()}
+                  </span>
+                  <span className="modal-stat-label">Total Spent</span>
+                </div>
+              </div>
             </div>
 
-            <div className="modal-body">
-              <div className="record-detail">
-                <div className="detail-section">
-                  <h4>Patient Information</h4>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <strong>Name:</strong> {getPatientName(selectedRecord.patientId)}
+            <div className="modal-body-modern">
+              {/* Patient Details Section */}
+              <div className="patient-details-section">
+                <h3>
+                  <span>👤</span>
+                  Patient Information
+                </h3>
+                <div className="details-grid">
+                  <div className="detail-card">
+                    <span className="detail-icon">📧</span>
+                    <div className="detail-content">
+                      <span className="detail-label">Email</span>
+                      <span className="detail-value">{selectedPatient.email || 'N/A'}</span>
                     </div>
-                    <div className="detail-item">
-                      <strong>Email:</strong> {getPatientEmail(selectedRecord.patientId)}
+                  </div>
+                  <div className="detail-card">
+                    <span className="detail-icon">📱</span>
+                    <div className="detail-content">
+                      <span className="detail-label">Phone</span>
+                      <span className="detail-value">{selectedPatient.phone || 'N/A'}</span>
                     </div>
-                    <div className="detail-item">
-                      <strong>Phone:</strong> {getPatientPhone(selectedRecord.patientId)}
+                  </div>
+                  <div className="detail-card">
+                    <span className="detail-icon">🎂</span>
+                    <div className="detail-content">
+                      <span className="detail-label">Age</span>
+                      <span className="detail-value">
+                        {selectedPatient.dateOfBirth ? `${calculateAge(selectedPatient.dateOfBirth)} years old` : 'N/A'}
+                      </span>
                     </div>
-                    <div className="detail-item">
-                      <strong>Age:</strong> {calculateAge(getPatientDetails(selectedRecord.patientId).dateOfBirth)} years old
-                    </div>
-                    <div className="detail-item">
-                      <strong>Patient ID:</strong> #{selectedRecord.patientId}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Date of Birth:</strong> {getPatientDetails(selectedRecord.patientId).dateOfBirth ? 
-                        formatDate(getPatientDetails(selectedRecord.patientId).dateOfBirth) : 'N/A'}
+                  </div>
+                  <div className="detail-card">
+                    <span className="detail-icon">📅</span>
+                    <div className="detail-content">
+                      <span className="detail-label">Date of Birth</span>
+                      <span className="detail-value">
+                        {selectedPatient.dateOfBirth ? formatDate(selectedPatient.dateOfBirth) : 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="detail-section">
-                  <h4>Appointment Information</h4>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <strong>Service:</strong> {getServiceName(selectedRecord.serviceId)}
+                {/* Emergency Contact */}
+                <div className="emergency-contact-section">
+                  <h4>
+                    <span>🚨</span>
+                    Emergency Contact
+                  </h4>
+                  <div className="emergency-details">
+                    <div className="emergency-item">
+                      <span className="emergency-label">Name:</span>
+                      <span className="emergency-value">{selectedPatient.emergencyContactName || 'N/A'}</span>
                     </div>
-                    <div className="detail-item">
-                      <strong>Price:</strong> ₱{getServicePrice(selectedRecord.serviceId)}
+                    <div className="emergency-item">
+                      <span className="emergency-label">Relationship:</span>
+                      <span className="emergency-value">{selectedPatient.emergencyContactRelationship || 'N/A'}</span>
                     </div>
-                    <div className="detail-item">
-                      <strong>Date & Time:</strong> {formatDateTime(selectedRecord.preferredDateTime)}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Original Appointment ID:</strong> #{selectedRecord.appointmentId}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Accepted on:</strong> {formatDateTime(selectedRecord.createdAt)}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Status:</strong> <span className="status-attended">Attended</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="detail-section">
-                  <h4>Medical Information</h4>
-                  <div className="symptoms-full">
-                    <strong>Symptoms/Reason for Visit:</strong>
-                    <div className="symptoms-content">
-                      <p>{selectedRecord.symptom}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="detail-section">
-                  <h4>Emergency Contact</h4>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <strong>Contact Name:</strong> {getPatientDetails(selectedRecord.patientId).emergencyContactName || 'N/A'}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Relationship:</strong> {getPatientDetails(selectedRecord.patientId).emergencyContactRelationship || 'N/A'}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Phone:</strong> {getPatientDetails(selectedRecord.patientId).emergencyContactPhone1 || 'N/A'}
+                    <div className="emergency-item">
+                      <span className="emergency-label">Phone:</span>
+                      <span className="emergency-value">{selectedPatient.emergencyContactPhone1 || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="modal-actions">
-                <button className="action-btn close-btn" onClick={closeDetailModal}>
-                  Close
-                </button>
+              {/* Appointment History Section */}
+              <div className="history-section">
+                <h3>
+                  <span>📋</span>
+                  Appointment History
+                </h3>
+                
+                <div className="history-timeline">
+                  {patientHistory.map((record, index) => (
+                    <div key={record.acceptedAppointmentId} className="history-item">
+                      <div className="timeline-marker">
+                        <div className="marker-dot"></div>
+                        {index < patientHistory.length - 1 && <div className="marker-line"></div>}
+                      </div>
+                      
+                      <div className="history-card">
+                        <div className="history-header">
+                          <div className="history-service">
+                            <span className="service-icon">🩺</span>
+                            <span className="service-name">{getServiceName(record.serviceId)}</span>
+                          </div>
+                          <span className="history-price">₱{getServicePrice(record.serviceId).toLocaleString()}</span>
+                        </div>
+                        
+                        <div className="history-date">
+                          <span className="date-icon">📅</span>
+                          <span>{formatDateTime(record.preferredDateTime)}</span>
+                        </div>
+                        
+                        <div className="history-symptoms">
+                          <div className="symptoms-header">
+                            <span className="symptoms-icon">💬</span>
+                            <span className="symptoms-label">Symptoms / Reason:</span>
+                          </div>
+                          <p className="symptoms-text">{record.symptom || 'No symptoms recorded'}</p>
+                        </div>
+                        
+                        <div className="history-footer">
+                          <span className="status-badge attended">
+                            <span>✓</span>
+                            Attended
+                          </span>
+                          <span className="record-id">Record #{record.acceptedAppointmentId}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            </div>
+
+            <div className="modal-footer-modern">
+              <button className="btn-close-modal" onClick={closeDetailModal}>
+                Close
+              </button>
             </div>
           </div>
         </div>
