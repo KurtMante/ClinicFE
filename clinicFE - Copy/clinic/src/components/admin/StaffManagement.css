@@ -238,6 +238,21 @@
   background: #dc2626;
 }
 
+.history-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.history-btn:hover {
+  background: #4338ca;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -265,6 +280,21 @@
   overflow: hidden;
   animation: modalFadeIn 0.3s ease-out;
   border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-modal {
+  background: linear-gradient(135deg, #312e81, #6366f1);
+  border-radius: 15px;
+  width: 95%;
+  max-width: 900px;
+  max-height: 90vh;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: modalFadeIn 0.3s ease-out;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalFadeIn {
@@ -310,9 +340,23 @@
   text-align: center;
 }
 
+.history-modal .modal-header {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+}
+
 .modal-header h3 {
   color: white;
   margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.history-modal .modal-header h3 {
+  color: #fff;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: bold;
 }
@@ -326,6 +370,12 @@
   padding: 2rem;
   max-height: 70vh;
   overflow-y: auto;
+}
+
+.history-modal .modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* Staff Form */
@@ -495,6 +545,11 @@
 
   .staff-modal,
   .staff-detail-modal {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .history-modal {
     width: 95%;
     margin: 10px;
   }

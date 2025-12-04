@@ -12,6 +12,7 @@ const StaffManagement = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [staffFormData, setStaffFormData] = useState({
     firstName: '',
@@ -28,6 +29,8 @@ const StaffManagement = () => {
     barangay: '',
     municipality: ''
   });
+  const [showHistory, setShowHistory] = useState(false);
+  const [deletedStaff, setDeletedStaff] = useState([]);
 
   useEffect(() => {
     fetchStaff();
@@ -43,7 +46,10 @@ const StaffManagement = () => {
       const response = await fetch('http://localhost:3000/api/staff');
       if (response.ok) {
         const data = await response.json();
-        setStaff(data);
+        // Only show non-deleted staff
+        setStaff(data.filter(member => member.isDeleted !== 1));
+        // Save deleted staff for history
+        setDeletedStaff(data.filter(member => member.isDeleted === 1));
       } else {
         setMessage('Failed to fetch staff');
       }
@@ -139,17 +145,20 @@ const StaffManagement = () => {
   };
 
   const handleDeleteStaff = async (staffId, staffName) => {
+    const deletedByStaffId = localStorage.getItem('staffId'); // Or get from context/session
     if (!window.confirm(`Are you sure you want to delete "${staffName}"? This action cannot be undone.`)) {
       return;
     }
 
     try {
       const response = await fetch(`http://localhost:3000/api/staff/${staffId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deletedByStaffId })
       });
 
       if (response.ok) {
-        setMessage('Staff member deleted successfully');
+        setMessage('Staff member soft deleted successfully');
         fetchStaff();
       } else {
         const data = await response.json();
@@ -197,6 +206,7 @@ const StaffManagement = () => {
     setIsCreateModalOpen(false);
     setIsEditModalOpen(false);
     setIsViewModalOpen(false);
+    setIsHistoryModalOpen(false);
     setSelectedStaff(null);
     resetForm();
     setMessage('');
@@ -254,7 +264,6 @@ const StaffManagement = () => {
           <h1>Staff Management</h1>
           <p>Manage clinic staff members and their information</p>
         </div>
-        
         <button className="create-staff-btn" onClick={openCreateModal}>
           + Add New Staff Member
         </button>
@@ -270,9 +279,69 @@ const StaffManagement = () => {
             className="search-input"
           />
         </div>
-        
-       
+        <button
+          className="history-btn"
+          style={{ marginLeft: '1rem' }}
+          onClick={() => setIsHistoryModalOpen(true)}
+        >
+          Show Former Staff
+        </button>
       </div>
+
+      {/* Former Staff Modal */}
+      {isHistoryModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsHistoryModalOpen(false)}>
+          <div className="history-modal" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setIsHistoryModalOpen(false)}>×</button>
+            <div className="modal-header">
+              <h3>Former Staff (History)</h3>
+            </div>
+            <div className="modal-body">
+              {deletedStaff.length === 0 ? (
+                <div className="no-staff">
+                  <div className="no-staff-icon">🕰️</div>
+                  <p>No former staff members found.</p>
+                </div>
+              ) : (
+                <div className="staff-table-container">
+                  <table className="staff-table">
+                    <thead>
+                      <tr>
+                        <th>Staff ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Date of Birth</th>
+                        <th>Deleted At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deletedStaff.map((staffMember) => (
+                        <tr key={staffMember.staffId}>
+                          <td>#{staffMember.staffId}</td>
+                          <td>
+                            <div className="staff-name">
+                              {staffMember.firstName} {staffMember.lastName}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="staff-email">
+                              {staffMember.email}
+                            </div>
+                          </td>
+                          <td>{staffMember.phone}</td>
+                          <td>{formatDate(staffMember.dateOfBirth)}</td>
+                          <td>{staffMember.deletedAt ? formatDateTime(staffMember.deletedAt) : 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div className={`message ${message.includes('successfully') ? 'success' : 'error'}`}>
@@ -667,7 +736,103 @@ const StaffManagement = () => {
                   </div>
                 </div>
 
-                {/* ...existing emergency contact and address sections with edit prefixes... */}
+                <div className="form-section">
+                  <h4>Emergency Contact</h4>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="editEmergencyContactName">Contact Name</label>
+                      <input
+                        type="text"
+                        id="editEmergencyContactName"
+                        name="emergencyContactName"
+                        value={staffFormData.emergencyContactName}
+                        onChange={handleInputChange}
+                        placeholder="Emergency contact name"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="editEmergencyContactRelationship">Relationship</label>
+                      <input
+                        type="text"
+                        id="editEmergencyContactRelationship"
+                        name="emergencyContactRelationship"
+                        value={staffFormData.emergencyContactRelationship}
+                        onChange={handleInputChange}
+                        placeholder="Relationship"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="editEmergencyContactPhone1">Primary Phone</label>
+                      <input
+                        type="tel"
+                        id="editEmergencyContactPhone1"
+                        name="emergencyContactPhone1"
+                        value={staffFormData.emergencyContactPhone1}
+                        onChange={handleInputChange}
+                        placeholder="09123456789"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="editEmergencyContactPhone2">Secondary Phone</label>
+                      <input
+                        type="tel"
+                        id="editEmergencyContactPhone2"
+                        name="emergencyContactPhone2"
+                        value={staffFormData.emergencyContactPhone2}
+                        onChange={handleInputChange}
+                        placeholder="09876543211"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h4>Address</h4>
+                  
+                  <div className="form-group">
+                    <label htmlFor="editStreetAddress">Street Address</label>
+                    <input
+                      type="text"
+                      id="editStreetAddress"
+                      name="streetAddress"
+                      value={staffFormData.streetAddress}
+                      onChange={handleInputChange}
+                      placeholder="Complete street address"
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="editBarangay">Barangay</label>
+                      <input
+                        type="text"
+                        id="editBarangay"
+                        name="barangay"
+                        value={staffFormData.barangay}
+                        onChange={handleInputChange}
+                        placeholder="Barangay"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="editMunicipality">Municipality</label>
+                      <input
+                        type="text"
+                        id="editMunicipality"
+                        name="municipality"
+                        value={staffFormData.municipality}
+                        onChange={handleInputChange}
+                        placeholder="Municipality"
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 <div className="modal-actions">
                   <button className="action-btn cancel-btn" onClick={closeModals}>
