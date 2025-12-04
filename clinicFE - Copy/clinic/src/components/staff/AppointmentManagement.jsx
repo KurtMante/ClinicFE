@@ -21,6 +21,8 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     preferredDateTime: '',
     symptom: ''
   });
+  const [schedule, setSchedule] = useState([]); // Add this state
+  const [rescheduleError, setRescheduleError] = useState(''); // Error message for rescheduling
 
   // Reminder states
   const [remindingAppointments, setRemindingAppointments] = useState([]);
@@ -34,6 +36,7 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     fetchAcceptedAppointments();
     fetchPatients();
     fetchServices();
+    fetchSchedule();
   }, []);
 
   useEffect(() => {
@@ -94,6 +97,18 @@ const AppointmentManagement = ({ isAdminView = false }) => {
       }
     } catch (error) {
       console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchSchedule = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/schedule');
+      if (response.ok) {
+        const data = await response.json();
+        setSchedule(data);
+      }
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
     }
   };
 
@@ -353,9 +368,56 @@ Clinic Management Team`;
     setIsRescheduleModalOpen(true);
   };
 
+  const handleRescheduleInputChange = (e) => {
+    const { name, value } = e.target;
+    setRescheduleData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Check doctor availability on date/time change
+    if (name === 'preferredDateTime') {
+      const availability = checkDoctorAvailability(value);
+      setRescheduleError(availability.available ? '' : availability.reason);
+    }
+  };
+
+  const checkDoctorAvailability = (dateTime) => {
+    if (!dateTime || schedule.length === 0) return { available: true, reason: '' };
+    const weekday = getWeekday(dateTime);
+    const sched = schedule.find(s => s.weekday === weekday);
+    if (!sched) return { available: false, reason: 'No schedule found for this day.' };
+    if (sched.status === 'DAY_OFF') return { available: false, reason: 'Doctor has a day off.' };
+    if (sched.status === 'UNAVAILABLE') return { available: false, reason: 'Doctor is unavailable.' };
+    if (sched.status === 'AVAILABLE' || sched.status === 'HALF_DAY') {
+      // Convert times to minutes
+      const toMinutes = (t) => {
+        if (!t) return null;
+        const [h, m, s] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const start = toMinutes(sched.startTime);
+      const end = toMinutes(sched.endTime);
+      const selected = toMinutes(new Date(dateTime).toTimeString().slice(0,5) + ':00');
+      if (start === null || end === null) return { available: false, reason: 'No time window set for this day.' };
+      if (selected === null) return { available: false, reason: 'Invalid appointment time.' };
+      if (selected < start) return { available: false, reason: `Selected time is before doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
+      if (selected > end) return { available: false, reason: `Selected time is after doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
+      return { available: true, reason: '' };
+    }
+    return { available: true, reason: '' };
+  };
+
   const handleRescheduleSubmit = async () => {
     if (!rescheduleData.preferredDateTime) {
       setMessage('Please select a new date and time');
+      return;
+    }
+
+    // Check doctor availability before submitting
+    const availability = checkDoctorAvailability(rescheduleData.preferredDateTime);
+    if (!availability.available) {
+      setRescheduleError(availability.reason);
       return;
     }
 
@@ -396,14 +458,6 @@ Clinic Management Team`;
     setMessage('');
   };
 
-  const handleRescheduleInputChange = (e) => {
-    const { name, value } = e.target;
-    setRescheduleData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const formatDateTime = (dateTime) => {
     return new Date(dateTime).toLocaleString('en-US', {
       year: 'numeric',
@@ -439,6 +493,11 @@ Clinic Management Team`;
 
   const getAttendanceStatusText = (isAttended) => {
     return isAttended === 1 ? 'ATTENDED' : 'NOT ATTENDED';
+  };
+
+  // Helper to get weekday (0=Sunday, 6=Saturday)
+  const getWeekday = (dateStr) => {
+    return new Date(dateStr).getDay();
   };
 
   return (
@@ -678,7 +737,12 @@ Clinic Management Team`;
                   required
                 />
               </div>
-
+              {rescheduleError && (
+                <div style={{ color: 'red', marginBottom: '10px' }}>
+                  Doctor is unavailable for the selected date/time.<br />
+                  <strong>Reason:</strong> {rescheduleError}
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="rescheduleSymptom">Symptoms / Reason</label>
                 <textarea

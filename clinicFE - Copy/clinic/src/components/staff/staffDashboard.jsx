@@ -21,6 +21,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   const [acceptedAppointments, setAcceptedAppointments] = useState([]);
   const [services, setServices] = useState([]);
   const [walkInPatients, setWalkInPatients] = useState([]);
+  const [schedule, setSchedule] = useState([]); // Add this state
   const [isLoading, setIsLoading] = useState(false);
 
   // Walk-in patient registration modal state
@@ -77,6 +78,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       fetchDashboardData();
     }
   }, [staff]);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, []);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -154,6 +159,18 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       }
     } catch (error) {
       console.error('Error fetching walk-in patients:', error);
+    }
+  };
+
+  const fetchSchedule = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/schedule');
+      if (response.ok) {
+        const data = await response.json();
+        setSchedule(data);
+      }
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
     }
   };
 
@@ -271,6 +288,40 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     }));
   };
 
+  const getWeekday = (dateStr) => {
+    return new Date(dateStr).getDay();
+  };
+
+  const checkDoctorAvailability = () => {
+    if (!walkInFormData.appointmentDate || !walkInFormData.appointmentTime || schedule.length === 0) {
+      return { available: true, reason: '' };
+    }
+    const weekday = getWeekday(walkInFormData.appointmentDate);
+    const sched = schedule.find(s => s.weekday === weekday);
+    if (!sched) return { available: false, reason: 'No schedule found for this day.' };
+    if (sched.status === 'DAY_OFF') return { available: false, reason: 'Doctor has a day off.' };
+    if (sched.status === 'UNAVAILABLE') return { available: false, reason: 'Doctor is unavailable.' };
+    if (sched.status === 'AVAILABLE' || sched.status === 'HALF_DAY') {
+      // Convert times to minutes
+      const toMinutes = (t) => {
+        if (!t) return null;
+        const [h, m, s] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const start = toMinutes(sched.startTime); // <-- FIXED
+      const end = toMinutes(sched.endTime);     // <-- FIXED
+      const selected = toMinutes(walkInFormData.appointmentTime + ':00');
+      if (start === null || end === null) return { available: false, reason: 'No time window set for this day.' };
+      if (selected === null) return { available: false, reason: 'Invalid appointment time.' };
+      if (selected < start) return { available: false, reason: `Selected time is before doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
+      if (selected > end) return { available: false, reason: `Selected time is after doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
+      return { available: true, reason: '' };
+    }
+    return { available: true, reason: '' };
+  };
+
+  const doctorAvailability = checkDoctorAvailability();
+
   const handleWalkInRegistration = async () => {
     // Basic validation
     if (!walkInFormData.firstName.trim() || !walkInFormData.lastName.trim() || 
@@ -278,6 +329,12 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         !walkInFormData.serviceId || !walkInFormData.appointmentDate || 
         !walkInFormData.appointmentTime) {
       setWalkInMessage('Please fill in all required fields including date and time');
+      return;
+    }
+
+    // Doctor availability check
+    if (!doctorAvailability.available) {
+      setWalkInMessage(`Doctor is unavailable for the selected date/time. Reason: ${doctorAvailability.reason}`);
       return;
     }
 
@@ -789,23 +846,30 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                   </div>
 
                   {walkInFormData.appointmentDate && walkInFormData.appointmentTime && (
-                    <div className="appointment-preview">
-                      <span className="preview-icon">🗓️</span>
-                      <div className="preview-content">
-                        <span className="preview-label">Scheduled for:</span>
-                        <span className="preview-value">
-                          {new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })} at {new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
+                    !doctorAvailability.available ? (
+                      <div className="doctor-unavailable-message" style={{ color: 'red', marginBottom: '10px' }}>
+                        Doctor is unavailable for the selected date/time.<br />
+                        <strong>Reason:</strong> {doctorAvailability.reason}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="appointment-preview">
+                        <span className="preview-icon">🗓️</span>
+                        <div className="preview-content">
+                          <span className="preview-label">Scheduled for:</span>
+                          <span className="preview-value">
+                            {new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })} at {new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
 
