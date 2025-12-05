@@ -1250,6 +1250,18 @@
   transform: translateY(-1px);
 }
 
+/* Add to PatientRecords.css */
+.role-indicator.walk-in {
+  background: #ffe0b2;
+  color: #d35400;
+  border-radius: 8px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  font-size: 0.85em;
+  font-weight: bold;
+  vertical-align: middle;
+}
+
 /* Responsive Design */
 @media (max-width: 900px) {
   .modal-header-modern {

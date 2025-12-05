@@ -193,6 +193,17 @@ const PatientRecords = () => {
   const stats = getRecordStats();
   const filteredPatients = getFilteredPatients();
 
+  const getRoleIndicator = (role) => {
+    if (role === 'Walkin' || role === 'walk-in') {
+      return (
+        <span className="role-indicator walk-in" title="Walk-in Patient">
+          🚶 Walk-in
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="patient-records-modern">
       {/* Header Section */}
@@ -272,7 +283,10 @@ const PatientRecords = () => {
                       <span>{patient.firstName?.[0]}{patient.lastName?.[0]}</span>
                     </div>
                     <div className="patient-info-modern">
-                      <h3>{patient.firstName} {patient.lastName}</h3>
+                      <h3>
+                        {patient.firstName} {patient.lastName}
+                        {getRoleIndicator(patient.role)}
+                      </h3>
                       <span className="patient-id">Patient ID: #{patient.patientId}</span>
                     </div>
                   </div>
@@ -338,7 +352,10 @@ const PatientRecords = () => {
                   <span>{selectedPatient.firstName?.[0]}{selectedPatient.lastName?.[0]}</span>
                 </div>
                 <div className="modal-patient-details">
-                  <h2>{selectedPatient.firstName} {selectedPatient.lastName}</h2>
+                  <h2>
+                    {selectedPatient.firstName} {selectedPatient.lastName}
+                    {getRoleIndicator(selectedPatient.role)}
+                  </h2>
                   <p>Patient ID: #{selectedPatient.patientId}</p>
                 </div>
               </div>

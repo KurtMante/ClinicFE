@@ -579,6 +579,7 @@ const AdminDashboard = ({ onNavigate, onLogout }) => {
                         <th>Phone</th>
                         <th>Email</th>
                         <th>Registered On</th>
+                        <th>Services</th> {/* Added column */}
                       </tr>
                     </thead>
                     <tbody>
@@ -596,6 +597,19 @@ const AdminDashboard = ({ onNavigate, onLogout }) => {
                             </div>
                           </td>
                           <td>{formatDateTime(patient.createdAt)}</td>
+                          <td>
+                            {
+                              // Find all appointments for this patient
+                              appointments
+                                .filter(apt => apt.patientId === patient.patientId)
+                                .map(apt => {
+                                  const service = services.find(s => s.serviceId === apt.serviceId);
+                                  return service ? service.serviceName : 'Unknown';
+                                })
+                                .filter((value, index, self) => self.indexOf(value) === index) // Remove duplicates
+                                .join(', ') || <span className="service-tag">N/A</span>
+                            }
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -241,7 +241,13 @@
 }
 
 .admin-main-content .service-count {
-  color: rgba(255, 255, 255, 0.8);
+  background: #27ae60; /* green */
+  color: #fff;
+  border-radius: 20px;
+  padding: 8px 0;
+  margin-top: 10px;
+  font-weight: bold;
+  text-align: center;
 }
 
 /* Walk-in Card */
