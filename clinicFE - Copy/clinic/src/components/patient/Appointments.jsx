@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Appointments.css';
+import Feedback from './Feedback'; // If you want to reuse the modal, or copy modal logic here
 
 const Appointments = ({ patient }) => {
   const [pendingAppointments, setPendingAppointments] = useState([]);
@@ -19,6 +20,17 @@ const Appointments = ({ patient }) => {
   const [schedules, setSchedules] = useState([]);
   const [selectedDaySchedule, setSelectedDaySchedule] = useState(null);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
+
+  // Feedback modal state
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackAppointment, setFeedbackAppointment] = useState(null);
+  const [feedbackForm, setFeedbackForm] = useState({
+    rating: 5,
+    comment: '',
+    isAnonymous: false
+  });
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
 
   useEffect(() => {
     if (patient) {
@@ -283,6 +295,69 @@ const Appointments = ({ patient }) => {
     return '⚕️';
   };
 
+  const openFeedbackModal = (appointment) => {
+    setFeedbackAppointment(appointment);
+    setFeedbackForm({
+      rating: 5,
+      comment: '',
+      isAnonymous: false
+    });
+    setFeedbackModalOpen(true);
+    setFeedbackMessage('');
+  };
+
+  const closeFeedbackModal = () => {
+    setFeedbackModalOpen(false);
+    setFeedbackAppointment(null);
+    setFeedbackForm({
+      rating: 5,
+      comment: '',
+      isAnonymous: false
+    });
+    setFeedbackMessage('');
+  };
+
+  const handleFeedbackInputChange = (e) => {
+    const { name, value } = e.target;
+    setFeedbackForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackForm.comment.trim()) {
+      setFeedbackMessage('Please provide a comment for your feedback');
+      return;
+    }
+    setIsFeedbackLoading(true);
+    try {
+      const feedbackData = {
+        patientId: patient.patientId,
+        appointmentId: feedbackAppointment.acceptedAppointmentId,
+        rating: parseInt(feedbackForm.rating),
+        comment: feedbackForm.comment.trim(),
+        isAnonymous: feedbackForm.isAnonymous
+      };
+      const response = await fetch('http://localhost:3000/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackData)
+      });
+      if (response.ok) {
+        setFeedbackMessage('Feedback submitted successfully!');
+        closeFeedbackModal();
+      } else {
+        const data = await response.json();
+        setFeedbackMessage(data.error || 'Failed to submit feedback');
+      }
+    } catch (error) {
+      setFeedbackMessage('Network error. Please try again.');
+    } finally {
+      setIsFeedbackLoading(false);
+    }
+  };
+
   return (
     <div className="appointments-modern">
       {/* Header Section */}
@@ -515,6 +590,17 @@ const Appointments = ({ patient }) => {
                           <span className="meta-item">ID: #{appointment.acceptedAppointmentId}</span>
                           <span className="meta-item">Accepted: {formatDate(appointment.createdAt)}</span>
                         </div>
+                        {appointment.isAttended === 1 && (
+                          <div className="card-actions">
+                            <button
+                              className="action-btn feedback-btn"
+                              onClick={() => openFeedbackModal(appointment)}
+                            >
+                              <span>✍️</span>
+                              Give Feedback
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -628,6 +714,112 @@ const Appointments = ({ patient }) => {
                   >
                     <span>✓</span>
                     Update Appointment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModalOpen && feedbackAppointment && (
+        <div className="modal-overlay-modern" onClick={closeFeedbackModal}>
+          <div className="modal-modern" onClick={e => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeFeedbackModal}>×</button>
+            <div className="modal-header-modern">
+              <div className="modal-icon">
+                <span>✍️</span>
+              </div>
+              <div className="modal-title">
+                <h3>Give Feedback</h3>
+                <p>Share your experience for this appointment</p>
+              </div>
+            </div>
+            <div className="modal-body-modern">
+              {feedbackMessage && (
+                <div className={`message-modern ${feedbackMessage.includes('successfully') ? 'success' : 'error'}`}>
+                  <span className="message-icon">{feedbackMessage.includes('successfully') ? '✓' : '⚠'}</span>
+                  {feedbackMessage}
+                </div>
+              )}
+              <div className="form-modern">
+                {/* Rating Selection */}
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">⭐</span>
+                    How would you rate your experience?
+                  </label>
+                  <div className="rating-selector">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rating-option-modern ${feedbackForm.rating == value ? 'selected' : ''}`}
+                        onClick={() => setFeedbackForm(prev => ({ ...prev, rating: value }))}
+                      >
+                        <span className="rating-emoji-large">{['😞','😕','😐','🙂','😄'][value-1]}</span>
+                        <span className="rating-stars-option">
+                          {[1,2,3,4,5].map(star => (
+                            <span key={star} className={`star-option ${star <= value ? 'filled' : ''}`}>★</span>
+                          ))}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Comment */}
+                <div className="form-group-modern">
+                  <label>
+                    <span className="label-icon">💬</span>
+                    Your Review
+                  </label>
+                  <textarea
+                    name="comment"
+                    value={feedbackForm.comment}
+                    onChange={handleFeedbackInputChange}
+                    placeholder="Please share your experience with this appointment..."
+                    rows="5"
+                  />
+                </div>
+                {/* Anonymous Option */}
+                <div className="anonymous-toggle">
+                  <label className="toggle-label">
+                    <div className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={feedbackForm.isAnonymous}
+                        onChange={e => setFeedbackForm(prev => ({
+                          ...prev,
+                          isAnonymous: e.target.checked
+                        }))}
+                      />
+                      <span className="toggle-slider"></span>
+                    </div>
+                    <span>🕶️ Submit Anonymously</span>
+                  </label>
+                </div>
+                {/* Actions */}
+                <div className="modal-actions-modern">
+                  <button className="btn-secondary" onClick={closeFeedbackModal}>
+                    Cancel
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={handleSubmitFeedback}
+                    disabled={isFeedbackLoading || !feedbackForm.comment.trim()}
+                  >
+                    {isFeedbackLoading ? (
+                      <>
+                        <span className="spinner"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <span>✓</span>
+                        Submit Feedback
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
