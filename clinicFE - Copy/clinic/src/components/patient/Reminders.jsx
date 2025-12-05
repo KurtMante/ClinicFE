@@ -127,18 +127,47 @@ const Reminders = ({ patient }) => {
     });
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  const parseDate = (dateString) => {
+  if (!dateString) return null;
+
+  // Convert "YYYY-MM-DD HH:mm:ss" → "YYYY-MM-DDTHH:mm:ss"
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
+    return new Date(dateString.replace(" ", "T"));
+  }
+
+  return new Date(dateString); // fallback
+};
+
+const formatDate = (dateString) => {
+  const date = parseDate(dateString);
+  if (isNaN(date)) return "Invalid Date";
+
+  return date.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "Asia/Manila"
+  });
+};
+
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
+    // Always treat as Manila time, no manual +8 hours
+    let dateObj;
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
+      // Parse as local time (Manila)
+      const [datePart, timePart] = dateString.split(' ');
+      const [year, month, day] = datePart.split('-');
+      const [hour, minute, second] = timePart.split(':');
+      dateObj = new Date(year, month - 1, day, hour, minute, second);
+    } else {
+      dateObj = new Date(dateString);
+    }
+    return dateObj.toLocaleTimeString('en-PH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Manila'
     });
   };
 
