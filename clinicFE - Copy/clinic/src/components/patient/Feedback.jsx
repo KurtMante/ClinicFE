@@ -15,6 +15,9 @@ const Feedback = ({ patient }) => {
     isAnonymous: false
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const FEEDBACKS_PER_PAGE = 5;
+
   useEffect(() => {
     if (patient) {
       fetchFeedbacks();
@@ -185,6 +188,17 @@ const Feedback = ({ patient }) => {
     return labels[rating - 1] || '';
   };
 
+  const paginatedFeedbacks = feedbacks.slice(
+    (currentPage - 1) * FEEDBACKS_PER_PAGE,
+    currentPage * FEEDBACKS_PER_PAGE
+  );
+
+  const totalPages = Math.ceil(feedbacks.length / FEEDBACKS_PER_PAGE);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   return (
     <div className="feedback-modern">
       {/* Header Section */}
@@ -280,71 +294,95 @@ const Feedback = ({ patient }) => {
               </button>
             </div>
           ) : (
-            <div className="feedback-grid">
-              {feedbacks.map((feedback) => (
-                <div key={feedback.feedbackId} className="feedback-card-modern">
-                  <div className="card-header-modern">
-                    <div className="rating-display">
-                      <div className="rating-badge">
-                        <span className="rating-emoji">{getRatingEmoji(feedback.rating)}</span>
-                        <span className="rating-value">{feedback.rating}/5</span>
+            <>
+              <div className="feedback-grid">
+                {paginatedFeedbacks.map((feedback) => (
+                  <div key={feedback.feedbackId} className="feedback-card-modern">
+                    <div className="card-header-modern">
+                      <div className="rating-display">
+                        <div className="rating-badge">
+                          <span className="rating-emoji">{getRatingEmoji(feedback.rating)}</span>
+                          <span className="rating-value">{feedback.rating}/5</span>
+                        </div>
+                        <div className="rating-stars">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span 
+                              key={star} 
+                              className={`star ${star <= feedback.rating ? 'filled' : ''}`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <span className="rating-label">{getRatingLabel(feedback.rating)}</span>
                       </div>
-                      <div className="rating-stars">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <span 
-                            key={star} 
-                            className={`star ${star <= feedback.rating ? 'filled' : ''}`}
-                          >
-                            ★
-                          </span>
-                        ))}
-                      </div>
-                      <span className="rating-label">{getRatingLabel(feedback.rating)}</span>
-                    </div>
-                    {feedback.isAnonymous && (
-                      <div className="anonymous-badge-modern">
-                        <span>🕶️</span>
-                        Anonymous
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="card-body-modern">
-                    <p className="feedback-comment-text">"{feedback.comment}"</p>
-                  </div>
-
-                  <div className="card-footer-modern">
-                    <div className="feedback-meta">
-                      <span className="meta-date">
-                        <span>📅</span>
-                        {formatDate(feedback.createdAt)}
-                      </span>
-                      {feedback.updatedAt !== feedback.createdAt && (
-                        <span className="meta-updated">
-                          (Edited)
-                        </span>
+                      {feedback.isAnonymous && (
+                        <div className="anonymous-badge-modern">
+                          <span>🕶️</span>
+                          Anonymous
+                        </div>
                       )}
                     </div>
-                    <div className="feedback-actions-modern">
-                      <button 
-                        className="action-btn-modern edit"
-                        onClick={() => handleEditFeedback(feedback)}
-                      >
-                        <span>✏️</span>
-                        Edit
-                      </button>
-                      <button 
-                        className="action-btn-modern delete"
-                        onClick={() => handleDeleteFeedback(feedback.feedbackId)}
-                      >
-                        <span>🗑️</span>
-                        Delete
-                      </button>
+
+                    <div className="card-body-modern">
+                      <p className="feedback-comment-text">"{feedback.comment}"</p>
+                    </div>
+
+                    <div className="card-footer-modern">
+                      <div className="feedback-meta">
+                        <span className="meta-date">
+                          <span>📅</span>
+                          {formatDate(feedback.createdAt)}
+                        </span>
+                        {feedback.updatedAt !== feedback.createdAt && (
+                          <span className="meta-updated">
+                            (Edited)
+                          </span>
+                        )}
+                      </div>
+                      <div className="feedback-actions-modern">
+                        <button 
+                          className="action-btn-modern edit"
+                          onClick={() => handleEditFeedback(feedback)}
+                        >
+                          <span>✏️</span>
+                          Edit
+                        </button>
+                        <button 
+                          className="action-btn-modern delete"
+                          onClick={() => handleDeleteFeedback(feedback.feedbackId)}
+                        >
+                          <span>🗑️</span>
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Prev
+                  </button>
+                  <span className="pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       )}
