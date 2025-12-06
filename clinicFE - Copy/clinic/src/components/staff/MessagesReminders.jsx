@@ -22,6 +22,9 @@ const MessagesReminders = () => {
     isRead: false
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const remindersPerPage = 8;
+
   useEffect(() => {
     fetchReminders();
     fetchPatients();
@@ -30,6 +33,10 @@ const MessagesReminders = () => {
   useEffect(() => {
     filterReminders();
   }, [reminders, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset page on filter/search
+  }, [filteredReminders]);
 
   const fetchReminders = async () => {
     setIsLoading(true);
@@ -141,29 +148,6 @@ const MessagesReminders = () => {
     }
   };
 
-  const handleMarkAsRead = async (reminderId) => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/reminders/${reminderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isRead: true }),
-      });
-
-      if (response.ok) {
-        setMessage('Reminder marked as read');
-        fetchReminders();
-      } else {
-        const data = await response.json().catch(() => ({}));
-        setMessage(data.error || 'Failed to update reminder');
-      }
-    } catch (error) {
-      setMessage('Network error while updating reminder.');
-      console.error('Error:', error);
-    }
-  };
-
   const handleDeleteReminder = async (reminderId) => {
     if (!window.confirm('Are you sure you want to delete this reminder?')) {
       return;
@@ -190,11 +174,6 @@ const MessagesReminders = () => {
   const handleViewReminder = (reminder) => {
     setSelectedReminder(reminder);
     setIsViewModalOpen(true);
-    
-    // Mark as read if not already read
-    if (!reminder.isRead) {
-      handleMarkAsRead(reminder.reminderId);
-    }
   };
 
   const openCreateModal = () => {
@@ -267,6 +246,11 @@ const MessagesReminders = () => {
   };
 
   const stats = getReminderStats();
+  const totalPages = Math.ceil(filteredReminders.length / remindersPerPage);
+  const paginatedReminders = filteredReminders.slice(
+    (currentPage - 1) * remindersPerPage,
+    currentPage * remindersPerPage
+  );
 
   return (
     <div className="messages-reminders-container">
@@ -296,36 +280,60 @@ const MessagesReminders = () => {
               </button>
             </div>
           ) : (
-            <div className="reminders-grid">
-              {filteredReminders.map((reminder) => (
-                <div 
-                  key={reminder.reminderId} 
-                  className={`reminder-card ${!reminder.isRead ? 'unread' : ''}`}
-                  onClick={() => handleViewReminder(reminder)}
-                >
-                  <div className="reminder-header">
-                    <div className={`reminder-type ${getTypeColor(reminder.reminderType)}`}>
-                      {reminder.reminderType}
+            <>
+              <div className="reminders-grid">
+                {paginatedReminders.map((reminder) => (
+                  <div 
+                    key={reminder.reminderId} 
+                    className={`reminder-card ${!reminder.isRead ? 'unread' : ''}`}
+                    onClick={() => handleViewReminder(reminder)}
+                  >
+                    <div className="reminder-header">
+                      <div className={`reminder-type ${getTypeColor(reminder.reminderType)}`}>
+                        {reminder.reminderType}
+                      </div>
+                      <div className="reminder-status">
+                        {!reminder.isRead && <span className="unread-indicator">●</span>}
+                      </div>
                     </div>
-                    <div className="reminder-status">
-                      {!reminder.isRead && <span className="unread-indicator">●</span>}
+                    
+                    <div className="reminder-content">
+                      <h3>{getPatientName(reminder.patientId)}</h3>
+                      <p className="reminder-message">
+                        {reminder.message.length > 100 
+                          ? `${reminder.message.substring(0, 100)}...` 
+                          : reminder.message}
+                      </p>
+                      <div className="reminder-datetime">
+                        📅 {formatDateTime(reminder.preferredDateTime)}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="reminder-content">
-                    <h3>{getPatientName(reminder.patientId)}</h3>
-                    <p className="reminder-message">
-                      {reminder.message.length > 100 
-                        ? `${reminder.message.substring(0, 100)}...` 
-                        : reminder.message}
-                    </p>
-                    <div className="reminder-datetime">
-                      📅 {formatDateTime(reminder.preferredDateTime)}
-                    </div>
-                  </div>
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Prev
+                  </button>
+                  <span className="pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       )}

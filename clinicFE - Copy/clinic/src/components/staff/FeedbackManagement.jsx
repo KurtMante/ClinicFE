@@ -4,6 +4,7 @@ import './FeedbackManagement.css';
 const FeedbackManagement = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [services, setServices] = useState([]);
   const [filteredFeedbacks, setFilteredFeedbacks] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('Default');
@@ -16,9 +17,14 @@ const FeedbackManagement = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const feedbacksPerPage = 5;
+
   useEffect(() => {
     fetchFeedbacks();
     fetchPatients();
+    fetchServices();
   }, []);
 
   // memoize to satisfy react-hooks/exhaustive-deps
@@ -84,6 +90,18 @@ const FeedbackManagement = () => {
     }
   };
 
+  const fetchServices = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/medical-services');
+      if (response.ok) {
+        const data = await response.json();
+        setServices(data);
+      }
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
   const getPatientName = (patientId) => {
     const patient = patients.find(p => p.patientId === patientId);
     if (!patient) return 'Unknown Patient';
@@ -93,6 +111,14 @@ const FeedbackManagement = () => {
   const getPatientEmail = (patientId) => {
     const patient = patients.find(p => p.patientId === patientId);
     return patient ? patient.email : 'N/A';
+  };
+
+  const getServiceName = (serviceId) => {
+    if (!serviceId) return 'No Service';
+    const service = services.find(
+      s => String(s.serviceId) === String(serviceId)
+    );
+    return service ? service.serviceName : 'Unknown Service';
   };
 
   const handleDeleteFeedback = async (feedbackId) => {
@@ -168,6 +194,16 @@ const FeedbackManagement = () => {
   };
 
   const stats = getFeedbackStats();
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page on filter/sort/search
+  }, [filteredFeedbacks]);
+
+  const totalPages = Math.ceil(filteredFeedbacks.length / feedbacksPerPage);
+  const paginatedFeedbacks = filteredFeedbacks.slice(
+    (currentPage - 1) * feedbacksPerPage,
+    currentPage * feedbacksPerPage
+  );
 
   return (
     <div className="feedback-management">
@@ -260,14 +296,14 @@ const FeedbackManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredFeedbacks.length === 0 ? (
+                {paginatedFeedbacks.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="no-feedback">
                       No feedback found matching your criteria
                     </td>
                   </tr>
                 ) : (
-                  filteredFeedbacks.map((feedback) => (
+                  paginatedFeedbacks.map((feedback) => (
                     <tr key={feedback.feedbackId}>
                       <td>
                         <div className="patient-info">
@@ -330,6 +366,28 @@ const FeedbackManagement = () => {
                 )}
               </tbody>
             </table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+                <span className="pagination-info">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  className="pagination-btn"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -356,6 +414,7 @@ const FeedbackManagement = () => {
                     </>
                   )}
                   <p><strong>Feedback Type:</strong> {selectedFeedback.isAnonymous ? 'Anonymous' : 'Public'}</p>
+                  <p><strong>Service:</strong> {getServiceName(selectedFeedback.serviceId)}</p>
                 </div>
 
                 <div className="detail-section">

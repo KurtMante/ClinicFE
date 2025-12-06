@@ -335,6 +335,7 @@ const Appointments = ({ patient }) => {
       const feedbackData = {
         patientId: patient.patientId,
         appointmentId: feedbackAppointment.acceptedAppointmentId,
+        serviceId: feedbackAppointment.serviceId, // <-- Add this line
         rating: parseInt(feedbackForm.rating),
         comment: feedbackForm.comment.trim(),
         isAnonymous: feedbackForm.isAnonymous
