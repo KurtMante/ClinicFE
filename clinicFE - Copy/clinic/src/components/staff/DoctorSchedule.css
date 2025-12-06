@@ -15,7 +15,7 @@
 .schedule-header h1 {
   font-size: 2rem;
   font-weight: bold;
-  color: #333;
+  color: #333;  
   margin: 0;
 }
 
@@ -74,6 +74,15 @@
   text-align: center;
 }
 
+/* Status column specific alignment */
+.schedule-table th:nth-child(3),
+.schedule-table td:nth-child(3) {
+  width: 20%;
+  min-width: 120px;
+  text-align: center;
+  vertical-align: middle;
+}
+
 .schedule-table th:first-child,
 .schedule-table td:first-child {
   width: 20%;
@@ -82,11 +91,6 @@
 .schedule-table th:nth-child(2),
 .schedule-table td:nth-child(2) {
   width: 30%;
-}
-
-.schedule-table th:nth-child(3),
-.schedule-table td:nth-child(3) {
-  width: 20%;
 }
 
 .schedule-table th:nth-child(4),
@@ -111,6 +115,7 @@
   text-transform: uppercase;
   letter-spacing: 0.025em;
   display: inline-block;
+  margin: 0 auto;
 }
 
 .status-badge.status-available {
