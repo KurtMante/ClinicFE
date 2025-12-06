@@ -14,6 +14,10 @@ const PatientRecords = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientHistory, setPatientHistory] = useState([]);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const patientsPerPage = 5;
+
   useEffect(() => {
     fetchAttendedAppointments();
     fetchPatients();
@@ -191,7 +195,7 @@ const PatientRecords = () => {
   };
 
   const stats = getRecordStats();
-  const filteredPatients = getFilteredPatients();
+  // Removed redundant declaration of filteredPatients
 
   const getRoleIndicator = (role) => {
     if (role === 'Walkin' || role === 'walk-in') {
@@ -203,6 +207,56 @@ const PatientRecords = () => {
     }
     return null;
   };
+
+  // Merge attended patients and all walk-in patients (no duplicates)
+  const getMergedPatients = () => {
+    const attended = getUniquePatients();
+    const walkins = patients
+      .filter(
+        (patient) =>
+          patient.role &&
+          patient.role.toLowerCase().includes('walk')
+      )
+      .map((patient) => ({
+        ...patient,
+        totalVisits: patient.totalVisits || 1,
+        totalSpent: patient.totalSpent || 0,
+        lastVisitDate: patient.updatedAt || patient.createdAt,
+      }));
+
+    // Merge, preferring attended data if duplicate patientId
+    const merged = [...attended];
+    walkins.forEach((walkin) => {
+      if (!merged.some((p) => p.patientId === walkin.patientId)) {
+        merged.push(walkin);
+      }
+    });
+    return merged;
+  };
+
+  // Filter merged patients based on search
+  const getFilteredMergedPatients = () => {
+    const mergedPatients = getMergedPatients();
+    if (!searchTerm) return mergedPatients;
+    const search = searchTerm.toLowerCase();
+    return mergedPatients.filter((patient) => {
+      const fullName = `${patient.firstName} ${patient.lastName}`.toLowerCase();
+      const email = (patient.email || '').toLowerCase();
+      const phone = (patient.phone || '').toLowerCase();
+      return fullName.includes(search) || email.includes(search) || phone.includes(search);
+    });
+  };
+
+  const filteredPatients = getFilteredMergedPatients();
+  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+  const paginatedPatients = filteredPatients.slice(
+    (currentPage - 1) * patientsPerPage,
+    currentPage * patientsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page on search/filter change
+  }, [searchTerm]);
 
   return (
     <div className="patient-records-modern">
@@ -266,7 +320,7 @@ const PatientRecords = () => {
         </div>
       ) : (
         <div className="records-content-modern">
-          {filteredPatients.length === 0 ? (
+          {paginatedPatients.length === 0 ? (
             <div className="no-records-modern">
               <div className="empty-illustration">
                 <span>📋</span>
@@ -275,66 +329,90 @@ const PatientRecords = () => {
               <p>No patients match your search criteria.</p>
             </div>
           ) : (
-            <div className="patients-grid">
-              {filteredPatients.map((patient) => (
-                <div key={patient.patientId} className="patient-card-modern">
-                  <div className="card-header-modern">
-                    <div className="patient-avatar">
-                      <span>{patient.firstName?.[0]}{patient.lastName?.[0]}</span>
+            <>
+              <div className="patients-grid">
+                {paginatedPatients.map((patient) => (
+                  <div key={patient.patientId} className="patient-card-modern">
+                    <div className="card-header-modern">
+                      <div className="patient-avatar">
+                        <span>{patient.firstName?.[0]}{patient.lastName?.[0]}</span>
+                      </div>
+                      <div className="patient-info-modern">
+                        <h3>
+                          {patient.firstName} {patient.lastName}
+                          {getRoleIndicator(patient.role)}
+                        </h3>
+                        <span className="patient-id">Patient ID: #{patient.patientId}</span>
+                      </div>
                     </div>
-                    <div className="patient-info-modern">
-                      <h3>
-                        {patient.firstName} {patient.lastName}
-                        {getRoleIndicator(patient.role)}
-                      </h3>
-                      <span className="patient-id">Patient ID: #{patient.patientId}</span>
+                    
+                    <div className="card-body-modern">
+                      <div className="info-row">
+                        <span className="info-icon">📧</span>
+                        <span className="info-text">{patient.email || 'No email'}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-icon">📱</span>
+                        <span className="info-text">{patient.phone || 'No phone'}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-icon">🎂</span>
+                        <span className="info-text">
+                          {patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} years old` : 'Age unknown'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="card-body-modern">
-                    <div className="info-row">
-                      <span className="info-icon">📧</span>
-                      <span className="info-text">{patient.email || 'No email'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-icon">📱</span>
-                      <span className="info-text">{patient.phone || 'No phone'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-icon">🎂</span>
-                      <span className="info-text">
-                        {patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)} years old` : 'Age unknown'}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="card-stats-modern">
-                    <div className="mini-stat">
-                      <span className="mini-stat-value">{patient.totalVisits}</span>
-                      <span className="mini-stat-label">Visits</span>
+                    <div className="card-stats-modern">
+                      <div className="mini-stat">
+                        <span className="mini-stat-value">{patient.totalVisits}</span>
+                        <span className="mini-stat-label">Visits</span>
+                      </div>
+                      <div className="mini-stat">
+                        <span className="mini-stat-value">₱{patient.totalSpent?.toLocaleString()}</span>
+                        <span className="mini-stat-label">Total Spent</span>
+                      </div>
                     </div>
-                    <div className="mini-stat">
-                      <span className="mini-stat-value">₱{patient.totalSpent?.toLocaleString()}</span>
-                      <span className="mini-stat-label">Total Spent</span>
-                    </div>
-                  </div>
 
-                  <div className="card-footer-modern">
-                    <div className="last-visit">
-                      <span className="last-visit-label">Last Visit:</span>
-                      <span className="last-visit-date">{formatDate(patient.lastVisitDate)}</span>
+                    <div className="card-footer-modern">
+                      <div className="last-visit">
+                        <span className="last-visit-label">Last Visit:</span>
+                        <span className="last-visit-date">{formatDate(patient.lastVisitDate)}</span>
+                      </div>
+                      <button 
+                        className="view-history-btn"
+                        onClick={() => handleViewDetails(patient)}
+                      >
+                        <span>📋</span>
+                        View History
+                      </button>
                     </div>
-                    <button 
-                      className="view-history-btn"
-                      onClick={() => handleViewDetails(patient)}
-                    >
-                      <span>📋</span>
-                      View History
-                    </button>
                   </div>
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    Prev
+                  </button>
+                  <span className="pagination-info">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       )}

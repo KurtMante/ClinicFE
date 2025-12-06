@@ -31,6 +31,10 @@ const AppointmentManagement = ({ isAdminView = false }) => {
   const [reminderPatient, setReminderPatient] = useState(null);
   const [reminderSent, setReminderSent] = useState(false);
 
+  // Pagination states
+  const [acceptedPage, setAcceptedPage] = useState(1);
+  const acceptedPerPage = 5;
+
   useEffect(() => {
     fetchAppointments();
     fetchAcceptedAppointments();
@@ -43,6 +47,10 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     filterAndSortAppointments();
     filterAndSortAcceptedAppointments();
   }, [appointments, acceptedAppointments, searchTerm, sortBy]);
+
+  useEffect(() => {
+    setAcceptedPage(1); // Reset page on filter/sort
+  }, [filteredAcceptedAppointments]);
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -112,8 +120,17 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     }
   };
 
+  // Helper to check if patient is walk-in
+  const isWalkInPatient = (patientId) => {
+    const patient = patients.find(p => p.patientId === patientId);
+    return patient && patient.role && patient.role.toLowerCase() === 'walkin';
+  };
+
   const filterAndSortAppointments = () => {
     let filtered = appointments.filter(appointment => {
+      // Exclude walk-in appointments from pending
+      if (isWalkInPatient(appointment.patientId)) return false;
+
       const patientName = getPatientName(appointment.patientId).toLowerCase();
       const serviceName = getServiceName(appointment.serviceId).toLowerCase();
       const search = searchTerm.toLowerCase();
@@ -141,6 +158,7 @@ const AppointmentManagement = ({ isAdminView = false }) => {
 
   const filterAndSortAcceptedAppointments = () => {
     let filtered = acceptedAppointments.filter(appointment => {
+      // Include walk-in appointments here
       const patientName = getPatientName(appointment.patientId).toLowerCase();
       const serviceName = getServiceName(appointment.serviceId).toLowerCase();
       const search = searchTerm.toLowerCase();
@@ -500,6 +518,12 @@ Clinic Management Team`;
     return new Date(dateStr).getDay();
   };
 
+  const totalAcceptedPages = Math.ceil(filteredAcceptedAppointments.length / acceptedPerPage);
+  const paginatedAcceptedAppointments = filteredAcceptedAppointments.slice(
+    (acceptedPage - 1) * acceptedPerPage,
+    acceptedPage * acceptedPerPage
+  );
+
   return (
     <div className="appointment-management">
       <div className="management-header">
@@ -642,71 +666,101 @@ Clinic Management Team`;
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAcceptedAppointments.length === 0 ? (
+                  {paginatedAcceptedAppointments.length === 0 ? (
                     <tr>
                       <td colSpan={isAdminView ? "5" : "6"} className="no-appointments">
                         No accepted appointments found
                       </td>
                     </tr>
                   ) : (
-                    filteredAcceptedAppointments.map((appointment) => (
-                      <tr key={appointment.acceptedAppointmentId}>
-                        <td>
-                          <div className="user-info">
-                            <span className="user-name">{getPatientName(appointment.patientId)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          {new Date(appointment.preferredDateTime).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </td>
-                        <td>
-                          {new Date(appointment.preferredDateTime).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </td>
-                        <td>{getServiceName(appointment.serviceId)}</td>
-                        <td>
-                          <span className={`table-status-badge ${getAttendanceStatusColor(appointment.isAttended)}`}>
-                            {getAttendanceStatusText(appointment.isAttended)}
-                          </span>
-                        </td>
-                        {!isAdminView && (
+                    paginatedAcceptedAppointments.map((appointment) => {
+                      const walkIn = isWalkInPatient(appointment.patientId);
+                      return (
+                        <tr key={appointment.acceptedAppointmentId}>
                           <td>
-                            <div className="action-buttons">
-                              {appointment.isAttended === 0 ? (
-                                <>
-                                  <button 
-                                    className="action-btn attend-btn"
-                                    onClick={() => handleMarkAsAttended(appointment.acceptedAppointmentId)}
-                                    title="Mark as Attended"
-                                  >
-                                    MARK ATTENDED
-                                  </button>
-                                  <button 
-                                    className={`action-btn remind-btn ${remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'reminding' : ''}`}
-                                    onClick={() => handleRemindPatient(appointment)}
-                                    title="Send Reminder"
-                                    disabled={remindingAppointments.includes(appointment.acceptedAppointmentId)}
-                                  >
-                                    {remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'SENDING...' : 'REMIND'}
-                                  </button>
-                                </>
-                              ) : (
-                                <span className="action-completed">COMPLETED</span>
-                              )}
+                            <div className="user-info">
+                              <span className="user-name">{getPatientName(appointment.patientId)}</span>
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    ))
+                          <td>
+                            {new Date(appointment.preferredDateTime).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </td>
+                          <td>
+                            {new Date(appointment.preferredDateTime).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+                          <td>{getServiceName(appointment.serviceId)}</td>
+                          <td>
+                            <span className={`table-status-badge ${getAttendanceStatusColor(1)}`}>
+                              ATTENDED
+                            </span>
+                          </td>
+                          {!isAdminView && (
+                            <td>
+                              <div className="action-buttons">
+                                {/* Hide actions for walk-in patients */}
+                                {walkIn ? (
+                                  <span className="action-completed">WALK-IN</span>
+                                ) : (
+                                  appointment.isAttended === 0 ? (
+                                    <>
+                                      <button 
+                                        className="action-btn attend-btn"
+                                        onClick={() => handleMarkAsAttended(appointment.acceptedAppointmentId)}
+                                        title="Mark as Attended"
+                                      >
+                                        MARK ATTENDED
+                                      </button>
+                                      <button 
+                                        className={`action-btn remind-btn ${remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'reminding' : ''}`}
+                                        onClick={() => handleRemindPatient(appointment)}
+                                        title="Send Reminder"
+                                        disabled={remindingAppointments.includes(appointment.acceptedAppointmentId)}
+                                      >
+                                        {remindingAppointments.includes(appointment.acceptedAppointmentId) ? 'SENDING...' : 'REMIND'}
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="action-completed">COMPLETED</span>
+                                  )
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
+              {/* Pagination Controls */}
+              {totalAcceptedPages > 1 && (
+                <div className="pagination-controls">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setAcceptedPage(acceptedPage - 1)}
+                    disabled={acceptedPage === 1}
+                  >
+                    Prev
+                  </button>
+                  <span className="pagination-info">
+                    Page {acceptedPage} of {totalAcceptedPages}
+                  </span>
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setAcceptedPage(acceptedPage + 1)}
+                    disabled={acceptedPage === totalAcceptedPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

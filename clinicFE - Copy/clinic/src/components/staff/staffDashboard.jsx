@@ -484,7 +484,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
 
       <div className="staff-dashboard-content">
         {/* Sidebar */}
-        <aside className="staff-sidebar">
+        <aside className="staff-sidebar" style={{ overflowY: 'auto', maxHeight: '100vh' }}>
           <div className="sidebar-header">
             <h3>Main Menu</h3>
           </div>
@@ -501,7 +501,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
             >
               Manage Appointments
             </button>
-            
             <button 
               className={`nav-item ${activeSection === 'messages' ? 'active' : ''}`}
               onClick={() => handleSectionChange('messages')}
@@ -526,19 +525,15 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
             >
               Patient's Record
             </button>
-          </nav>
-          
-          <div className="sidebar-separator"></div>
-          
-          <div className="sidebar-footer">
-            <h3>Others</h3>
+            {/* Account Settings directly below Patient's Record */}
             <button 
               className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`}
               onClick={() => handleSectionChange('settings')}
+              style={{ marginTop: '2rem' }}
             >
               Account Settings
             </button>
-          </div>
+          </nav>
         </aside>
 
         {/* Main Content */}
