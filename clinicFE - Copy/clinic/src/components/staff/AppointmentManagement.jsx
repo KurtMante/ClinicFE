@@ -697,9 +697,15 @@ Clinic Management Team`;
                           </td>
                           <td>{getServiceName(appointment.serviceId)}</td>
                           <td>
-                            <span className={`table-status-badge ${getAttendanceStatusColor(1)}`}>
-                              ATTENDED
-                            </span>
+                            {walkIn ? (
+                              <span className={`table-status-badge ${getAttendanceStatusColor(1)}`}>
+                                ATTENDED
+                              </span>
+                            ) : (
+                              <span className={`table-status-badge ${getAttendanceStatusColor(appointment.isAttended)}`}>
+                                {getAttendanceStatusText(appointment.isAttended)}
+                              </span>
+                            )}
                           </td>
                           {!isAdminView && (
                             <td>
