@@ -16,7 +16,10 @@ const PatientRecords = () => {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const patientsPerPage = 5;
+  const patientsPerPage = 8; // <-- Set to 8 per page
+
+  // Walk-in filter state
+  const [showWalkInsOnly, setShowWalkInsOnly] = useState(false);
 
   useEffect(() => {
     fetchAttendedAppointments();
@@ -234,9 +237,19 @@ const PatientRecords = () => {
     return merged;
   };
 
-  // Filter merged patients based on search
+  // Count walk-in patients
+  const walkInCount = patients.filter(
+    (p) => p.role && p.role.toLowerCase().includes('walk')
+  ).length;
+
+  // Filter merged patients based on search and walk-in toggle
   const getFilteredMergedPatients = () => {
-    const mergedPatients = getMergedPatients();
+    let mergedPatients = getMergedPatients();
+    if (showWalkInsOnly) {
+      mergedPatients = mergedPatients.filter(
+        (patient) => patient.role && patient.role.toLowerCase().includes('walk')
+      );
+    }
     if (!searchTerm) return mergedPatients;
     const search = searchTerm.toLowerCase();
     return mergedPatients.filter((patient) => {
@@ -286,6 +299,22 @@ const PatientRecords = () => {
             <div className="stat-info">
               <span className="stat-value">{stats.thisMonth}</span>
               <span className="stat-label">This Month</span>
+            </div>
+          </div>
+          {/* Walk-in Stat Card */}
+          <div
+            className={`stat-box walkin-card${showWalkInsOnly ? ' active' : ''}`}
+            style={{ cursor: 'pointer', background: showWalkInsOnly ? '#e0ffe0' : undefined }}
+            onClick={() => {
+              setShowWalkInsOnly((prev) => !prev);
+              setCurrentPage(1); // Reset to first page when toggling filter
+            }}
+            title="Show only walk-in patients"
+          >
+            <span className="stat-icon">🚶</span>
+            <div className="stat-info">
+              <span className="stat-value">{walkInCount}</span>
+              <span className="stat-label">Walk-in Patients</span>
             </div>
           </div>
         </div>
