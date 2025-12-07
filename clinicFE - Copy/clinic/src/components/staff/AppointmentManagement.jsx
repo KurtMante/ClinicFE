@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './AppointmentManagement.css';
 
-const AppointmentManagement = ({ isAdminView = false }) => {
+const AppointmentManagement = ({ isAdminView = false, onNavigateToCalendar = null }) => {
   const [appointments, setAppointments] = useState([]);
   const [acceptedAppointments, setAcceptedAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -41,6 +41,14 @@ const AppointmentManagement = ({ isAdminView = false }) => {
     fetchPatients();
     fetchServices();
     fetchSchedule();
+
+    // Auto-refresh every 10 seconds
+    const interval = setInterval(() => {
+      fetchAppointments();
+      fetchAcceptedAppointments();
+    }, 10000);
+
+    return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
   useEffect(() => {
@@ -378,12 +386,21 @@ Clinic Management Team`;
   };
 
   const handleRescheduleClick = (appointment) => {
-    setSelectedAppointment(appointment);
-    setRescheduleData({
-      preferredDateTime: appointment.preferredDateTime,
-      symptom: appointment.symptom
-    });
-    setIsRescheduleModalOpen(true);
+    // Instead of opening modal, navigate to calendar with appointment data
+    if (onNavigateToCalendar) {
+      onNavigateToCalendar('calendar', { 
+        rescheduleMode: true, 
+        appointmentToReschedule: appointment 
+      });
+    } else {
+      // Fallback: open the old modal if callback not available
+      setSelectedAppointment(appointment);
+      setRescheduleData({
+        preferredDateTime: appointment.preferredDateTime,
+        symptom: appointment.symptom
+      });
+      setIsRescheduleModalOpen(true);
+    }
   };
 
   const handleRescheduleInputChange = (e) => {
@@ -541,6 +558,17 @@ Clinic Management Team`;
           </div>
           
           <div className="control-buttons">
+            <button 
+              className="control-btn refresh-btn"
+              onClick={() => {
+                fetchAppointments();
+                fetchAcceptedAppointments();
+                setMessage('Refreshing appointments...');
+              }}
+              title="Refresh"
+            >
+              🔄 REFRESH
+            </button>
             <button 
               className={`control-btn ${sortBy === 'Default' ? 'active' : ''}`}
               onClick={() => setSortBy('Default')}
@@ -767,65 +795,6 @@ Clinic Management Team`;
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Modal */}
-      {isRescheduleModalOpen && selectedAppointment && (
-        <div className="modal-overlay" onClick={closeRescheduleModal}>
-          <div className="reschedule-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeRescheduleModal}>×</button>
-            
-            <div className="modal-header">
-              <h3>Reschedule Appointment</h3>
-              <p>Patient: {getPatientName(selectedAppointment.patientId)}</p>
-              <p>Service: {getServiceName(selectedAppointment.serviceId)}</p>
-            </div>
-
-            <div className="modal-body">
-              <div className="form-group">
-                <label htmlFor="rescheduleDateTime">New Date & Time *</label>
-                <input
-                  type="datetime-local"
-                  id="rescheduleDateTime"
-                  name="preferredDateTime"
-                  value={rescheduleData.preferredDateTime}
-                  onChange={handleRescheduleInputChange}
-                  min={getMinDateTime()}
-                  required
-                />
-              </div>
-              {rescheduleError && (
-                <div style={{ color: 'red', marginBottom: '10px' }}>
-                  Doctor is unavailable for the selected date/time.<br />
-                  <strong>Reason:</strong> {rescheduleError}
-                </div>
-              )}
-              <div className="form-group">
-                <label htmlFor="rescheduleSymptom">Symptoms / Reason</label>
-                <textarea
-                  id="rescheduleSymptom"
-                  name="symptom"
-                  value={rescheduleData.symptom}
-                  onChange={handleRescheduleInputChange}
-                  placeholder="Symptoms or reason for visit..."
-                  rows="4"
-                  disabled
-                  className="disabled-input"
-                />
-                <span className="input-note">Symptoms cannot be modified when rescheduling</span>
-              </div>
-
-              <div className="modal-actions">
-                <button className="action-btn cancel-btn" onClick={closeRescheduleModal}>
-                  Cancel
-                </button>
-                <button className="action-btn save-btn" onClick={handleRescheduleSubmit}>
-                  Update Appointment
-                </button>
-              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AppointmentManagement from './AppointmentManagement';
+import AppointmentCalendar from './AppointmentCalendar';
 import DoctorSchedule from './DoctorSchedule';
 import FeedbackManagement from './FeedbackManagement';
 import MessagesReminders from './MessagesReminders';
@@ -23,6 +24,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   const [walkInPatients, setWalkInPatients] = useState([]);
   const [schedule, setSchedule] = useState([]); // Add this state
   const [isLoading, setIsLoading] = useState(false);
+  const [calendarData, setCalendarData] = useState(null);
 
   // Walk-in patient registration modal state
   const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
@@ -220,8 +222,11 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     return { name: mostBooked[0], count: mostBooked[1] };
   };
 
-  const handleSectionChange = (section) => {
+  const handleSectionChange = (section, data = null) => {
     setActiveSection(section);
+    if (data) {
+      setCalendarData(data);
+    }
   };
 
   const handleLogout = () => {
@@ -383,7 +388,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
           serviceId: parseInt(walkInFormData.serviceId),
           preferredDateTime: appointmentDateTime,
           symptom: walkInFormData.symptom || 'Walk-in consultation',
-          status: 'Pending',
+          status: 'Accepted',
           isWalkIn: true  // Flag to identify walk-in appointments
         };
 
@@ -496,6 +501,12 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
               Dashboard
             </button>
             <button 
+              className={`nav-item ${activeSection === 'calendar' ? 'active' : ''}`}
+              onClick={() => handleSectionChange('calendar')}
+            >
+              📅 Calendar
+            </button>
+            <button 
               className={`nav-item ${activeSection === 'appointments' ? 'active' : ''}`}
               onClick={() => handleSectionChange('appointments')}
             >
@@ -604,8 +615,12 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
             </div>
           )}
 
+          {activeSection === 'calendar' && (
+            <AppointmentCalendar rescheduleData={calendarData} />
+          )}
+
           {activeSection === 'appointments' && (
-            <AppointmentManagement />
+            <AppointmentManagement onNavigateToCalendar={handleSectionChange} />
           )}
 
           {activeSection === 'schedule' && (
@@ -626,17 +641,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
 
           {activeSection === 'settings' && (
             <StaffProfile staff={staff} />
-          )}
-
-          {/* Placeholder sections */}
-          {activeSection !== 'dashboard' && activeSection !== 'appointments' && 
-           activeSection !== 'schedule' && activeSection !== 'feedback' && 
-           activeSection !== 'messages' && activeSection !== 'records' && 
-           activeSection !== 'settings' && (
-            <div className="section-placeholder">
-              <h2>{activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} Section</h2>
-              <p>This section will be implemented based on your requirements.</p>
-            </div>
           )}
         </main>
       </div>
