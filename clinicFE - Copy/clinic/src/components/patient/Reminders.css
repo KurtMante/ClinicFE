@@ -499,7 +499,7 @@
 }
 
 .header-title h1 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 0.25rem 0;
@@ -942,14 +942,17 @@
 }
 
 .modal-modern {
-  background: white;
-  border-radius: 20px;
+  background: #fff;
+  border-radius: 18px;
   width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
+  max-width: 480px;
+  max-height: 92vh;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(13, 148, 136, 0.18);
   animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 @keyframes modalSlideIn {
@@ -977,61 +980,57 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #fff;
   z-index: 10;
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 
 .modal-close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* Header */
 .modal-header-modern {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
   background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  color: white;
+  color: #fff;
   position: relative;
 }
 
 .modal-icon {
-  width: 56px;
-  height: 56px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .modal-title h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  font-weight: 700;
   margin: 0;
+  color: #fff;
 }
 
 .modal-title p {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  margin: 0.25rem 0 0 0;
+  font-size: 1rem;
+  color: #e0f2f1;
+  margin: 0.2rem 0 0 0;
 }
 
-.modal-body-modern {
-  padding: 1.5rem;
-  max-height: calc(90vh - 120px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* Status Section */
+/* Status badge */
 .status-section {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
 }
 
 .status-badge-modern {
@@ -1040,11 +1039,8 @@
   gap: 0.375rem;
   padding: 0.5rem 1rem;
   border-radius: 20px;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 600;
-}
-
-.status-badge-modern.unread {
   background: #d1fae5;
   color: #065f46;
 }
@@ -1054,230 +1050,177 @@
   color: #6b7280;
 }
 
-/* Detail Card */
-.detail-card {
+/* Body */
+.modal-body-modern {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
   background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .modal-body-modern {
+    padding: 1rem;
+    max-height: 60vh;
+  }
+}
+
+/* Detail Card Section */
+.detail-card {
+  background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(13, 148, 136, 0.06);
+  margin-bottom: 0.5rem;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .detail-card-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.875rem 1rem;
-  background: white;
+  padding: 0.9rem 1rem;
+  background: #f3f4f6;
   border-bottom: 1px solid #e5e7eb;
-}
-
-.detail-icon {
-  font-size: 1rem;
+  border-radius: 12px 12px 0 0;
 }
 
 .detail-card-header h4 {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  color: #0d9488;
+  margin: 0;
   font-weight: 600;
-  color: #374151;
-  margin: 0;
 }
 
-.message-box {
+.detail-icon {
+  font-size: 1.2rem;
+}
+
+.detail-content {
   padding: 1rem;
-  background: #f0fdfa;
-  border-left: 3px solid #0d9488;
-  margin: 1rem;
-  border-radius: 8px;
-}
-
-.message-box p {
-  color: #1f2937;
-  line-height: 1.6;
-  margin: 0;
+  font-size: 1rem;
+  color: #374151;
+  word-break: break-word;
 }
 
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  padding: 1rem;
 }
 
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.detail-item.full-width {
-  grid-column: span 2;
+@media (max-width: 600px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
 }
 
 .detail-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #6b7280;
+  margin-bottom: 0.2rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .detail-value {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1rem;
   color: #1f2937;
+  font-weight: 500;
 }
 
-/* Modal Actions */
+/* Message Box */
+.message-box {
+  padding: 1rem;
+  background: #e0f2f1;
+  border-left: 4px solid #0d9488;
+  border-radius: 0 0 12px 12px;
+  font-size: 1rem;
+  margin: 0;
+  color: #1f2937;
+  line-height: 1.6;
+}
+
+/* Actions */
 .modal-actions-modern {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: #fff;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 -1px 4px rgba(13, 148, 136, 0.04);
+  margin-top: auto;
+}
+
+@media (max-width: 600px) {
+  .modal-actions-modern {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 0;
+  }
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  font-size: 1.05rem;
+  padding: 0.9rem 0.5rem;
+  border-radius: 8px;
+  margin: 0;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #0d9488 60%, #14b8a6 100%);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.12);
 }
 
 .btn-secondary {
-  flex: 1;
-  padding: 0.875rem;
   background: #f3f4f6;
-  color: #4b5563;
-  border: none;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  color: #374151;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
 .btn-secondary:hover {
   background: #e5e7eb;
 }
 
-.btn-primary {
-  flex: 2;
+/* Close Button */
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.875rem;
-  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: #fff;
+  z-index: 10;
+  transition: background 0.2s;
 }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.btn-primary.secondary {
-  background: #6b7280;
-}
-
-.btn-primary.secondary:hover {
-  background: #4b5563;
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .reminders-header-modern {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .header-stats {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .stat-box {
-    flex: 1;
-    padding: 0.875rem;
-  }
-
-  .reminders-controls-modern {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-box-modern {
-    max-width: none;
-  }
-
-  .filter-tabs {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .card-footer-modern {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .footer-actions {
-    width: 100%;
-  }
-
-  .action-btn-modern {
-    flex: 1;
-    justify-content: center;
-  }
-
-  .modal-modern {
-    max-height: 95vh;
-    border-radius: 16px;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-item.full-width {
-    grid-column: span 1;
-  }
-
-  .modal-actions-modern {
-    flex-direction: column;
-  }
-
-  .btn-secondary,
-  .btn-primary {
-    flex: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-title h1 {
-    font-size: 1.5rem;
-  }
-
-  .header-stats {
-    flex-wrap: wrap;
-  }
-
-  .stat-box {
-    min-width: calc(50% - 0.5rem);
-  }
-
-  .filter-tabs {
-    flex-wrap: wrap;
-  }
-
-  .filter-tab {
-    flex: 1;
-    justify-content: center;
-    font-size: 0.8rem;
-    padding: 0.5rem 0.75rem;
-  }
-
-  .modal-header-modern {
-    padding: 1.25rem;
-  }
-
-  .modal-body-modern {
-    padding: 1rem;
-  }
-}
+/* --- End Revised Modal Design --- */

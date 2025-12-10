@@ -22,6 +22,9 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   const [noteLoading, setNoteLoading] = useState(false)
   const [noteError, setNoteError] = useState(null)
 
+  // Mobile navigation state
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+
   // Function to get section from URL hash
   const getSectionFromURL = () => {
     const hash = window.location.hash.replace("#", "")
@@ -227,6 +230,18 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
       {/* Top Header */}
       <header className="top-header">
         <div className="header-brand">
+          {/* Burger icon for mobile */}
+          <button
+            className="burger-btn"
+            aria-label="Open navigation"
+            onClick={() => setIsMobileNavOpen(true)}
+          >
+            <span className="burger-icon">
+              <span className="burger-line"></span>
+              <span className="burger-line"></span>
+              <span className="burger-line"></span>
+            </span>
+          </button>
           <div className="brand-logo">
             <span>WMC</span>
           </div>
@@ -248,8 +263,79 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
         </div>
       </header>
 
+      {/* Mobile Nav Panel */}
+      {isMobileNavOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setIsMobileNavOpen(false)}>
+          <nav
+            className="mobile-nav-panel"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              className="mobile-nav-close"
+              aria-label="Close navigation"
+              onClick={() => setIsMobileNavOpen(false)}
+            >
+              ×
+            </button>
+            <div className="mobile-nav-list">
+              <button
+                className={`mobile-nav-item ${activeSection === "home" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("home"); setIsMobileNavOpen(false); }}
+              >
+                Dashboard
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button
+                className={`mobile-nav-item ${activeSection === "book" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("book"); setIsMobileNavOpen(false); }}
+              >
+                Book Appointment
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button
+                className={`mobile-nav-item ${activeSection === "appointments" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("appointments"); setIsMobileNavOpen(false); }}
+              >
+                My Appointments
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button
+                className={`mobile-nav-item ${activeSection === "feedback" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("feedback"); setIsMobileNavOpen(false); }}
+              >
+                Feedback
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button
+                className={`mobile-nav-item ${activeSection === "reminders" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("reminders"); setIsMobileNavOpen(false); }}
+              >
+                Reminders
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button
+                className={`mobile-nav-item ${activeSection === "settings" ? "active" : ""}`}
+                onClick={() => { handleSectionChange("settings"); setIsMobileNavOpen(false); }}
+              >
+                Settings
+              </button>
+              <div className="mobile-nav-divider"></div>
+              <button className="mobile-nav-item logout" onClick={() => { handleLogout(); setIsMobileNavOpen(false); }}>
+                Log Out
+              </button>
+            </div>
+            <div className="mobile-nav-footer">
+              <div className="mobile-nav-divider"></div>
+              <div className="mobile-nav-footer-text">
+                Clinic Hours: MONDAY - SUNDAY, 9AM - 8PM
+              </div>
+            </div>
+          </nav>
+        </div>
+      )}
+
       <div className="dashboard-layout">
-        {/* Sidebar */}
+        {/* Sidebar for desktop */}
         <aside className="sidebar-modern">
           <nav className="sidebar-nav-modern">
             <button
@@ -302,6 +388,77 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
             </button>
           </div>
         </aside>
+
+        {/* Mobile sidebar navigation */}
+        {isMobileNavOpen && (
+          <div className="mobile-nav-overlay" onClick={() => setIsMobileNavOpen(false)}>
+            <nav
+              className="mobile-nav-panel"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                className="mobile-nav-close"
+                aria-label="Close navigation"
+                onClick={() => setIsMobileNavOpen(false)}
+              >
+                ×
+              </button>
+              <div className="mobile-nav-list">
+                <button
+                  className={`mobile-nav-item ${activeSection === "home" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("home"); setIsMobileNavOpen(false); }}
+                >
+                  Dashboard
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button
+                  className={`mobile-nav-item ${activeSection === "book" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("book"); setIsMobileNavOpen(false); }}
+                >
+                  Book Appointment
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button
+                  className={`mobile-nav-item ${activeSection === "appointments" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("appointments"); setIsMobileNavOpen(false); }}
+                >
+                  My Appointments
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button
+                  className={`mobile-nav-item ${activeSection === "feedback" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("feedback"); setIsMobileNavOpen(false); }}
+                >
+                  Feedback
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button
+                  className={`mobile-nav-item ${activeSection === "reminders" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("reminders"); setIsMobileNavOpen(false); }}
+                >
+                  Reminders
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button
+                  className={`mobile-nav-item ${activeSection === "settings" ? "active" : ""}`}
+                  onClick={() => { handleSectionChange("settings"); setIsMobileNavOpen(false); }}
+                >
+                  Settings
+                </button>
+                <div className="mobile-nav-divider"></div>
+                <button className="mobile-nav-item logout" onClick={() => { handleLogout(); setIsMobileNavOpen(false); }}>
+                  Log Out
+                </button>
+              </div>
+              <div className="mobile-nav-footer">
+                <div className="mobile-nav-divider"></div>
+                <div className="mobile-nav-footer-text">
+                  Clinic Hours: MONDAY - SUNDAY, 9AM - 8PM
+                </div>
+              </div>
+            </nav>
+          </div>
+        )}
 
         {/* Main Content */}
         <main className="main-content-modern">

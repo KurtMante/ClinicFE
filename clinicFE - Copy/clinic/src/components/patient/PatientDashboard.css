@@ -758,6 +758,109 @@
   }
 }
 
+/* Mobile Nav Overlay */
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 2000;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* Sliding Panel */
+.mobile-nav-panel {
+  background: #fff;
+  width: 85vw;
+  max-width: 340px;
+  height: 100vh;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transform: translateX(-100%);
+  animation: slideInNav 0.3s forwards;
+  padding: 0;
+}
+
+@keyframes slideInNav {
+  to {
+    transform: translateX(0);
+  }
+}
+
+.mobile-nav-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #222;
+  align-self: flex-end;
+  margin: 1rem 1rem 0 0;
+  cursor: pointer;
+}
+
+.mobile-nav-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0 0 0;
+  flex: 1;
+}
+
+.mobile-nav-item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 0;
+  outline: none;
+}
+
+.mobile-nav-item.active {
+  color: #0d9488;
+}
+
+.mobile-nav-item.logout {
+  color: #dc2626;
+}
+
+.mobile-nav-item:active,
+.mobile-nav-item:hover {
+  background: #f3f4f6;
+}
+
+.mobile-nav-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0 1.5rem;
+}
+
+.mobile-nav-footer {
+  padding: 1rem 1.5rem;
+  font-size: 0.95rem;
+  color: #6b7280;
+  border-top: 1px solid #e5e7eb;
+}
+
+.mobile-nav-footer-text {
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
+/* Remove default button styles for nav items */
+.mobile-nav-item {
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+/* --- End Mobile Nav Panel Design --- */
+
 /* Responsive */
 @media (max-width: 1024px) {
   .content-grid {
@@ -797,5 +900,158 @@
 
   .brand-text p {
     display: none;
+  }
+}
+
+/* Responsive styles for mobile */
+@media (max-width: 900px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+  .sidebar-modern {
+    width: 100%;
+    min-width: unset;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+  }
+  .sidebar-nav-modern {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+    gap: 0.5rem;
+  }
+  .nav-item-modern {
+    font-size: 1rem;
+    padding: 0.5rem 0.7rem;
+    min-width: 80px;
+  }
+  .sidebar-logout {
+    display: none;
+  }
+  .main-content-modern {
+    width: 100%;
+    padding: 0.5rem;
+  }
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .bottom-row {
+    grid-template-columns: 1fr;
+  }
+  .card-modern {
+    min-width: 0;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .doctor-content-modern {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .doctor-image-modern img {
+    width: 100%;
+    max-width: 220px;
+    height: auto;
+  }
+  .modal-content-modern {
+    width: 95vw;
+    max-width: 400px;
+    padding: 1rem;
+  }
+  .modal-header-modern h3 {
+    font-size: 1.2rem;
+  }
+  .note-date-picker label,
+  .note-date-picker input,
+  .note-date-picker button {
+    font-size: 1rem;
+  }
+  .health-metrics,
+  .vital-list,
+  .quick-actions-modern {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .appointments-list {
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .appointment-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.7rem;
+  }
+}
+
+/* Make font sizes and buttons more touch-friendly */
+@media (max-width: 600px) {
+  .top-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.5rem;
+  }
+  .header-brand h1 {
+    font-size: 1.1rem;
+  }
+  .header-actions {
+    gap: 0.5rem;
+  }
+  .card-header-modern h2 {
+    font-size: 1rem;
+  }
+  .card-header-modern p {
+    font-size: 0.9rem;
+  }
+  .doctor-name-tag h4 {
+    font-size: 1rem;
+  }
+  .doctor-name-tag p {
+    font-size: 0.9rem;
+  }
+  .btn-primary,
+  .btn-confirm,
+  .btn-reschedule {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+.burger-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  gap: 5px;
+}
+.burger-line {
+  display: block;
+  width: 24px;
+  height: 3px;
+  background: #0d9488;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.burger-btn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .burger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
   }
 }

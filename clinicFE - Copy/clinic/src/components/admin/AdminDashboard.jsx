@@ -412,19 +412,13 @@ const AdminDashboard = ({ onNavigate, onLogout }) => {
             >
               Patient's Record
             </button>
-          </nav>
-          
-          <div className="sidebar-separator"></div>
-          
-          <div className="sidebar-footer">
-            <h3>Others</h3>
             <button 
               className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`}
               onClick={() => handleSectionChange('settings')}
             >
               Account Settings
             </button>
-          </div>
+          </nav>
         </aside>
 
         {/* Main Content */}

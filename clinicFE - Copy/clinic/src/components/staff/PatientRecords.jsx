@@ -20,6 +20,8 @@ const PatientRecords = () => {
 
   // Walk-in filter state
   const [showWalkInsOnly, setShowWalkInsOnly] = useState(false);
+  // Non-walk-in filter state
+  const [showNonWalkInsOnly, setShowNonWalkInsOnly] = useState(false);
 
   useEffect(() => {
     fetchAttendedAppointments();
@@ -242,12 +244,17 @@ const PatientRecords = () => {
     (p) => p.role && p.role.toLowerCase().includes('walk')
   ).length;
 
-  // Filter merged patients based on search and walk-in toggle
+  // Filter merged patients based on search and walk-in/non-walk-in toggle
   const getFilteredMergedPatients = () => {
     let mergedPatients = getMergedPatients();
     if (showWalkInsOnly) {
       mergedPatients = mergedPatients.filter(
         (patient) => patient.role && patient.role.toLowerCase().includes('walk')
+      );
+    }
+    if (showNonWalkInsOnly) {
+      mergedPatients = mergedPatients.filter(
+        (patient) => !patient.role || !patient.role.toLowerCase().includes('walk')
       );
     }
     if (!searchTerm) return mergedPatients;
@@ -269,7 +276,7 @@ const PatientRecords = () => {
 
   useEffect(() => {
     setCurrentPage(1); // Reset to first page on search/filter change
-  }, [searchTerm]);
+  }, [searchTerm, showWalkInsOnly, showNonWalkInsOnly]);
 
   return (
     <div className="patient-records-modern">
@@ -280,7 +287,17 @@ const PatientRecords = () => {
           <p>View patient profiles and their complete medical history</p>
         </div>
         <div className="header-stats">
-          <div className="stat-box">
+          {/* Patients Stat Card */}
+          <div
+            className={`stat-box${showNonWalkInsOnly ? ' active' : ''}`}
+            style={{ cursor: 'pointer', background: showNonWalkInsOnly ? '#e0f7fa' : undefined }}
+            onClick={() => {
+              setShowNonWalkInsOnly((prev) => !prev);
+              setShowWalkInsOnly(false); // Disable walk-in filter if toggling non-walk-in
+              setCurrentPage(1);
+            }}
+            title="Show only non-walk-in patients"
+          >
             <span className="stat-icon">👥</span>
             <div className="stat-info">
               <span className="stat-value">{stats.uniquePatients}</span>
@@ -307,7 +324,8 @@ const PatientRecords = () => {
             style={{ cursor: 'pointer', background: showWalkInsOnly ? '#e0ffe0' : undefined }}
             onClick={() => {
               setShowWalkInsOnly((prev) => !prev);
-              setCurrentPage(1); // Reset to first page when toggling filter
+              setShowNonWalkInsOnly(false); // Disable non-walk-in filter if toggling walk-in
+              setCurrentPage(1);
             }}
             title="Show only walk-in patients"
           >
