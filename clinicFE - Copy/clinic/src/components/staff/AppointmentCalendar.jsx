@@ -268,9 +268,16 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
           body: JSON.stringify({
             firstName,
             lastName,
-            email: newAppointmentForm.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}@walkin.temp`,
+            email: newAppointmentForm.email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@walkin.temp`,
             phone,
             dateOfBirth,
+            emergencyContactName: "",
+            emergencyContactRelationship: "",
+            emergencyContactPhone1: "",
+            emergencyContactPhone2: "",
+            streetAddress: "",
+            barangay: "",
+            municipality: "",
             password: `walkin${Date.now().toString().slice(-4)}`,
             role: 'Walkin'
           })
@@ -294,7 +301,7 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
           serviceId: parseInt(serviceId),
           preferredDateTime: appointmentDateTime,
           symptom: symptom || 'Consultation',
-          status: 'Pending',
+          status: patientType === 'walkin' ? 'Accepted' : 'Pending',
           isWalkIn: patientType === 'walkin'
         })
       });
@@ -302,6 +309,20 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
       if (!appointmentResponse.ok) {
         const error = await appointmentResponse.json();
         throw new Error(error.error || 'Failed to create appointment');
+      }
+
+      const createdAppointment = await appointmentResponse.json();
+
+      // If walk-in, mark as attended right away
+      if (patientType === 'walkin') {
+        await fetch('http://localhost:3000/api/accepted-appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appointmentId: createdAppointment.appointmentId,
+            isAttended: 1
+          })
+        });
       }
 
       setMessage('Appointment created successfully!');
