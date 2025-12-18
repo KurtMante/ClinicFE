@@ -22,45 +22,22 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   const [acceptedAppointments, setAcceptedAppointments] = useState([]);
   const [services, setServices] = useState([]);
   const [walkInPatients, setWalkInPatients] = useState([]);
-  const [schedule, setSchedule] = useState([]); // Add this state
+  const [schedule, setSchedule] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState(null);
 
-  // Walk-in patient registration modal state
-  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  // Only keep the walk-in list modal state
   const [isWalkInListModalOpen, setIsWalkInListModalOpen] = useState(false);
-  const [walkInFormData, setWalkInFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    serviceId: '',
-    symptom: '',
-    appointmentDate: '',
-    appointmentTime: '',
-    emergencyContactName: '',
-    emergencyContactRelationship: '',
-    emergencyContactPhone1: '',
-    emergencyContactPhone2: '',
-    streetAddress: '',
-    barangay: '',
-    municipality: ''
-  });
-  const [walkInMessage, setWalkInMessage] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
     const staffData = localStorage.getItem('staff');
     const rememberMeStaff = localStorage.getItem('rememberMeStaff');
-    
     if (staffData) {
       try {
         const parsedData = JSON.parse(staffData);
         setStaff(parsedData);
       } catch (error) {
         console.error('Error parsing staff data:', error);
-        // Only clear data and redirect if remember me is not set
         if (rememberMeStaff !== 'true') {
           localStorage.removeItem('staff');
           localStorage.removeItem('rememberMeStaff');
@@ -68,7 +45,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         }
       }
     } else {
-      // Only redirect to home if remember me is not set
       if (rememberMeStaff !== 'true') {
         onNavigate('home');
       }
@@ -236,208 +212,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     onNavigate('home');
   };
 
-  // Get current date and time for default values
-  const getCurrentDate = () => {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
-  };
-
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toTimeString().slice(0, 5);
-  };
-
-  const getMinDate = () => {
-    return getCurrentDate();
-  };
-
-  const openWalkInModal = () => {
-    setIsWalkInModalOpen(true);
-    setWalkInMessage('');
-    // Set default date and time to current
-    setWalkInFormData(prev => ({
-      ...prev,
-      appointmentDate: getCurrentDate(),
-      appointmentTime: getCurrentTime()
-    }));
-  };
-
-  const closeWalkInModal = () => {
-    setIsWalkInModalOpen(false);
-    setWalkInFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      serviceId: '',
-      symptom: '',
-      appointmentDate: '',
-      appointmentTime: '',
-      emergencyContactName: '',
-      emergencyContactRelationship: '',
-      emergencyContactPhone1: '',
-      emergencyContactPhone2: '',
-      streetAddress: '',
-      barangay: '',
-      municipality: ''
-    });
-    setWalkInMessage('');
-  };
-
-  const handleWalkInInputChange = (e) => {
-    const { name, value } = e.target;
-    setWalkInFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const getWeekday = (dateStr) => {
-    return new Date(dateStr).getDay();
-  };
-
-  const checkDoctorAvailability = () => {
-    if (!walkInFormData.appointmentDate || !walkInFormData.appointmentTime || schedule.length === 0) {
-      return { available: true, reason: '' };
-    }
-    const weekday = getWeekday(walkInFormData.appointmentDate);
-    const sched = schedule.find(s => s.weekday === weekday);
-    if (!sched) return { available: false, reason: 'No schedule found for this day.' };
-    if (sched.status === 'DAY_OFF') return { available: false, reason: 'Doctor has a day off.' };
-    if (sched.status === 'UNAVAILABLE') return { available: false, reason: 'Doctor is unavailable.' };
-    if (sched.status === 'AVAILABLE' || sched.status === 'HALF_DAY') {
-      // Convert times to minutes
-      const toMinutes = (t) => {
-        if (!t) return null;
-        const [h, m, s] = t.split(':').map(Number);
-        return h * 60 + m;
-      };
-      const start = toMinutes(sched.startTime); // <-- FIXED
-      const end = toMinutes(sched.endTime);     // <-- FIXED
-      const selected = toMinutes(walkInFormData.appointmentTime + ':00');
-      if (start === null || end === null) return { available: false, reason: 'No time window set for this day.' };
-      if (selected === null) return { available: false, reason: 'Invalid appointment time.' };
-      if (selected < start) return { available: false, reason: `Selected time is before doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
-      if (selected > end) return { available: false, reason: `Selected time is after doctor's available hours (${sched.startTime} - ${sched.endTime}).` };
-      return { available: true, reason: '' };
-    }
-    return { available: true, reason: '' };
-  };
-
-  const doctorAvailability = checkDoctorAvailability();
-
-  const handleWalkInRegistration = async () => {
-    // Basic validation
-    if (!walkInFormData.firstName.trim() || !walkInFormData.lastName.trim() || 
-        !walkInFormData.phone.trim() || !walkInFormData.dateOfBirth || 
-        !walkInFormData.serviceId || !walkInFormData.appointmentDate || 
-        !walkInFormData.appointmentTime) {
-      setWalkInMessage('Please fill in all required fields including date and time');
-      return;
-    }
-
-    // Doctor availability check
-    if (!doctorAvailability.available) {
-      setWalkInMessage(`Doctor is unavailable for the selected date/time. Reason: ${doctorAvailability.reason}`);
-      return;
-    }
-
-    setIsRegistering(true);
-    setWalkInMessage('');
-
-    try {
-      // Generate a temporary password for walk-in patients
-      const tempPassword = `walkin${Date.now().toString().slice(-4)}`;
-      
-      const registrationData = {
-        firstName: walkInFormData.firstName,
-        lastName: walkInFormData.lastName,
-        email: walkInFormData.email || `${walkInFormData.firstName.toLowerCase()}.${walkInFormData.lastName.toLowerCase()}@walkin.temp`,
-        phone: walkInFormData.phone,
-        dateOfBirth: walkInFormData.dateOfBirth,
-        password: tempPassword,
-        role: 'Walkin',
-        emergencyContactName: walkInFormData.emergencyContactName,
-        emergencyContactRelationship: walkInFormData.emergencyContactRelationship,
-        emergencyContactPhone1: walkInFormData.emergencyContactPhone1,
-        emergencyContactPhone2: walkInFormData.emergencyContactPhone2,
-        streetAddress: walkInFormData.streetAddress,
-        barangay: walkInFormData.barangay,
-        municipality: walkInFormData.municipality
-      };
-
-      // First, register the patient
-      const patientResponse = await fetch('http://localhost:3000/api/patients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationData),
-      });
-
-      const patientData = await patientResponse.json();
-
-      if (patientResponse.ok) {
-        // Combine date and time into MySQL datetime format
-        const appointmentDateTime = `${walkInFormData.appointmentDate} ${walkInFormData.appointmentTime}:00`;
-
-        // Now create an appointment for the walk-in patient
-        const appointmentData = {
-          patientId: patientData.patientId,
-          serviceId: parseInt(walkInFormData.serviceId),
-          preferredDateTime: appointmentDateTime,
-          symptom: walkInFormData.symptom || 'Walk-in consultation',
-          status: 'Accepted',
-          isWalkIn: true  // Flag to identify walk-in appointments
-        };
-
-        const appointmentResponse = await fetch('http://localhost:3000/api/appointments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(appointmentData),
-        });
-
-        if (appointmentResponse.ok) {
-          const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
-          const formattedDate = new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-          const formattedTime = new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          
-          setWalkInMessage(`Walk-in patient registered successfully!\n\n📅 Date: ${formattedDate}\n⏰ Time: ${formattedTime}\n🩺 Service: ${selectedService?.serviceName || 'Unknown'}\n🔑 Temporary password: ${tempPassword}`);
-        } else {
-          const errorData = await appointmentResponse.json();
-          setWalkInMessage(`Patient registered but appointment creation failed: ${errorData.error || 'Unknown error'}. Temporary password: ${tempPassword}`);
-        }
-
-        // Refresh data
-        fetchWalkInPatients();
-        fetchAppointments();
-        
-        // Clear form after successful registration
-        setTimeout(() => {
-          closeWalkInModal();
-        }, 5000);
-      } else {
-        setWalkInMessage(patientData.error || 'Failed to register walk-in patient');
-      }
-    } catch (error) {
-      setWalkInMessage('Unable to register patient. Please try again later.');
-      console.error('Error:', error);
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
+  // Only keep the walk-in list modal open/close functions
   const openWalkInListModal = () => {
     setIsWalkInListModalOpen(true);
   };
@@ -601,13 +376,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                       >
                         View All
                       </button>
-                      <button 
-                        className="register-walkin-btn"
-                        onClick={openWalkInModal}
-                        title="Register Walk-in Patient"
-                      >
-                        + Add Patient
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -650,26 +418,15 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         <div className="modal-overlay" onClick={closeWalkInListModal}>
           <div className="walkin-list-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={closeWalkInListModal}>×</button>
-            
             <div className="modal-header">
               <h3>Walk-in Patients</h3>
               <p>Total walk-in patients: {walkInPatients.length}</p>
             </div>
-
             <div className="modal-body">
               {walkInPatients.length === 0 ? (
                 <div className="no-patients">
                   <div className="no-patients-icon">👥</div>
                   <p>No walk-in patients found.</p>
-                  <button 
-                    className="register-walkin-btn"
-                    onClick={() => {
-                      closeWalkInListModal();
-                      openWalkInModal();
-                    }}
-                  >
-                    Register First Walk-in Patient
-                  </button>
                 </div>
               ) : (
                 <div className="patients-table-container">
@@ -703,326 +460,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                   </table>
                 </div>
               )}
-
               <div className="modal-actions">
                 <button className="action-btn close-btn" onClick={closeWalkInListModal}>
                   Close
                 </button>
-                <button 
-                  className="action-btn register-btn"
-                  onClick={() => {
-                    closeWalkInListModal();
-                    openWalkInModal();
-                  }}
-                >
-                  Add New Walk-in Patient
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Walk-in Patient Registration Modal */}
-      {isWalkInModalOpen && (
-        <div className="modal-overlay" onClick={closeWalkInModal}>
-          <div className="walkin-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeWalkInModal}>×</button>
-            
-            <div className="modal-header">
-              <h3>Register Walk-in Patient</h3>
-              <p>Register a new patient for walk-in consultation</p>
-            </div>
-
-            <div className="modal-body">
-              {walkInMessage && (
-                <div className={`message ${walkInMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{walkInMessage}</pre>
-                </div>
-              )}
-
-              <div className="walkin-form">
-                <div className="form-section">
-                  <h4>Personal Information</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInFirstName">First Name *</label>
-                      <input
-                        type="text"
-                        id="walkInFirstName"
-                        name="firstName"
-                        value={walkInFormData.firstName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Enter first name"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInLastName">Last Name *</label>
-                      <input
-                        type="text"
-                        id="walkInLastName"
-                        name="lastName"
-                        value={walkInFormData.lastName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Enter last name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInPhone">Phone Number *</label>
-                      <input
-                        type="tel"
-                        id="walkInPhone"
-                        name="phone"
-                        value={walkInFormData.phone}
-                        onChange={handleWalkInInputChange}
-                        placeholder="09123456789"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInDateOfBirth">Date of Birth *</label>
-                      <input
-                        type="date"
-                        id="walkInDateOfBirth"
-                        name="dateOfBirth"
-                        value={walkInFormData.dateOfBirth}
-                        onChange={handleWalkInInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="walkInEmail">Email (Optional)</label>
-                    <input
-                      type="email"
-                      id="walkInEmail"
-                      name="email"
-                      value={walkInFormData.email}
-                      onChange={handleWalkInInputChange}
-                      placeholder="patient@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Appointment Date & Time Section */}
-                <div className="form-section">
-                  <h4>📅 Appointment Schedule</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInAppointmentDate">Appointment Date *</label>
-                      <input
-                        type="date"
-                        id="walkInAppointmentDate"
-                        name="appointmentDate"
-                        value={walkInFormData.appointmentDate}
-                        onChange={handleWalkInInputChange}
-                        min={getMinDate()}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInAppointmentTime">Appointment Time *</label>
-                      <input
-                        type="time"
-                        id="walkInAppointmentTime"
-                        name="appointmentTime"
-                        value={walkInFormData.appointmentTime}
-                        onChange={handleWalkInInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {walkInFormData.appointmentDate && walkInFormData.appointmentTime && (
-                    !doctorAvailability.available ? (
-                      <div className="doctor-unavailable-message" style={{ color: 'red', marginBottom: '10px' }}>
-                        Doctor is unavailable for the selected date/time.<br />
-                        <strong>Reason:</strong> {doctorAvailability.reason}
-                      </div>
-                    ) : (
-                      <div className="appointment-preview">
-                        <span className="preview-icon">🗓️</span>
-                        <div className="preview-content">
-                          <span className="preview-label">Scheduled for:</span>
-                          <span className="preview-value">
-                            {new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })} at {new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {/* Service Selection Section */}
-                <div className="form-section">
-                  <h4>Service Selection</h4>
-                  
-                  <div className="form-group">
-                    <label htmlFor="walkInService">Select Service *</label>
-                    <select
-                      id="walkInService"
-                      name="serviceId"
-                      value={walkInFormData.serviceId}
-                      onChange={handleWalkInInputChange}
-                      required
-                      className="service-select"
-                    >
-                      <option value="">-- Select a Service --</option>
-                      {services.map((service) => (
-                        <option key={service.serviceId} value={service.serviceId}>
-                          {service.serviceName} - ₱{service.price?.toLocaleString() || '0'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {walkInFormData.serviceId && (
-                    <div className="selected-service-info">
-                      {(() => {
-                        const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
-                        return selectedService ? (
-                          <>
-                            <div className="service-detail">
-                              <span className="service-icon">🩺</span>
-                              <div className="service-info">
-                                <strong>{selectedService.serviceName}</strong>
-                                <span className="service-price">Price: ₱{selectedService.price?.toLocaleString() || '0'}</span>
-                              </div>
-                            </div>
-                          </>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-
-                  <div className="form-group">
-                    <label htmlFor="walkInSymptom">Symptoms / Reason for Visit</label>
-                    <textarea
-                      id="walkInSymptom"
-                      name="symptom"
-                      value={walkInFormData.symptom}
-                      onChange={handleWalkInInputChange}
-                      placeholder="Describe the patient's symptoms or reason for visit..."
-                      rows="3"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h4>Emergency Contact</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInEmergencyName">Contact Name</label>
-                      <input
-                        type="text"
-                        id="walkInEmergencyName"
-                        name="emergencyContactName"
-                        value={walkInFormData.emergencyContactName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Emergency contact name"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInEmergencyRelationship">Relationship</label>
-                      <input
-                        type="text"
-                        id="walkInEmergencyRelationship"
-                        name="emergencyContactRelationship"
-                        value={walkInFormData.emergencyContactRelationship}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Relationship"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="walkInEmergencyPhone">Emergency Contact Phone</label>
-                    <input
-                      type="tel"
-                      id="walkInEmergencyPhone"
-                      name="emergencyContactPhone1"
-                      value={walkInFormData.emergencyContactPhone1}
-                      onChange={handleWalkInInputChange}
-                      placeholder="09123456789"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h4>Address (Optional)</h4>
-                  
-                  <div className="form-group">
-                    <label htmlFor="walkInStreetAddress">Street Address</label>
-                    <input
-                      type="text"
-                      id="walkInStreetAddress"
-                      name="streetAddress"
-                      value={walkInFormData.streetAddress}
-                      onChange={handleWalkInInputChange}
-                      placeholder="Complete street address"
-                    />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInBarangay">Barangay</label>
-                      <input
-                        type="text"
-                        id="walkInBarangay"
-                        name="barangay"
-                        value={walkInFormData.barangay}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Barangay"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInMunicipality">Municipality</label>
-                      <input
-                        type="text"
-                        id="walkInMunicipality"
-                        name="municipality"
-                        value={walkInFormData.municipality}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Municipality"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                  <button className="action-btn cancel-btn" onClick={closeWalkInModal}>
-                    Cancel
-                  </button>
-                  <button 
-                    className="action-btn register-btn"
-                    onClick={handleWalkInRegistration}
-                    disabled={isRegistering}
-                  >
-                    {isRegistering ? 'Registering...' : 'Register Patient'}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
