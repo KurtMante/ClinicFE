@@ -73,10 +73,8 @@ const LoginModal = ({ isOpen, onClose, onNavigate, onOpenStaffLogin, onOpenAdmin
 
       if (response.ok) {
         setMessage('Login successful!');
-        // Store patient data with proper field mapping
         const patientData = {
           ...data.patient,
-          // Ensure we have the correct patientId field
           patientId: data.patient.patientId || data.patient.id
         };
         localStorage.setItem('patient', JSON.stringify(patientData));
@@ -85,12 +83,9 @@ const LoginModal = ({ isOpen, onClose, onNavigate, onOpenStaffLogin, onOpenAdmin
         } else {
           localStorage.removeItem('rememberMe');
         }
-        // Close modal and navigate to dashboard with URL update
+        // Force a full reload to ensure patient data is loaded before rendering dashboard
         setTimeout(() => {
-          onClose();
-          onNavigate('dashboard');
-          // Ensure URL is set correctly
-          window.history.replaceState({ page: 'dashboard' }, '', '/dashboard');
+          window.location.href = '/dashboard'; // or your dashboard route
         }, 1000);
       } else {
         setMessage(data.error || 'Login failed');

@@ -72,7 +72,6 @@ const StaffLoginModal = ({ isOpen, onClose, onNavigate }) => {
         // Store staff data with proper field mapping
         const staffData = {
           ...data.staff,
-          // Ensure we have the correct staffId field
           staffId: data.staff.staffId || data.staff.id
         };
         localStorage.setItem('staff', JSON.stringify(staffData));
@@ -81,10 +80,9 @@ const StaffLoginModal = ({ isOpen, onClose, onNavigate }) => {
         } else {
           localStorage.removeItem('rememberMeStaff');
         }
-        // Close modal and navigate to staff dashboard
+        // Force a full reload to ensure staff data is loaded before rendering dashboard
         setTimeout(() => {
-          onClose();
-          onNavigate('staffDashboard');
+          window.location.href = '/staff/dashboard'; // or your staff dashboard route
         }, 1000);
       } else {
         setMessage(data.error || 'Login failed');
