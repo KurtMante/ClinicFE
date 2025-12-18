@@ -317,11 +317,16 @@ const EmergencyReschedules = ({ onBack }) => {
                     style={{ marginLeft: 8, minWidth: 140, padding: 3, borderRadius: 4, border: '1px solid #ccc' }}
                   >
                     <option value="">-- Select Appointment --</option>
-                    {appointments.map(apt => (
-                      <option key={apt.appointmentId} value={apt.appointmentId}>
-                        #{apt.appointmentId} - {patients.find(p => p.patientId === apt.patientId)?.firstName || 'Unknown'} {patients.find(p => p.patientId === apt.patientId)?.lastName || ''} ({services.find(s => s.serviceId === apt.serviceId)?.serviceName || 'Service'}) on {new Date(apt.preferredDateTime).toLocaleString()}
-                      </option>
-                    ))}
+                    {appointments
+                      .filter(apt => {
+                        const patient = patients.find(p => p.patientId === apt.patientId);
+                        return patient && patient.role !== 'Walkin'; // Exclude walk-ins by patient role
+                      })
+                      .map(apt => (
+                        <option key={apt.appointmentId} value={apt.appointmentId}>
+                          #{apt.appointmentId} - {patients.find(p => p.patientId === apt.patientId)?.firstName || 'Unknown'} {patients.find(p => p.patientId === apt.patientId)?.lastName || ''} ({services.find(s => s.serviceId === apt.serviceId)?.serviceName || 'Service'}) on {new Date(apt.preferredDateTime).toLocaleString()}
+                        </option>
+                      ))}
                   </select>
                 </label>
               </div>
