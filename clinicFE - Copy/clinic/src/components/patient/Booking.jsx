@@ -39,8 +39,20 @@ const PatientAppointmentCalendar = ({
 
   // Helper: get schedule for a day
   const getDaySchedule = (date) => {
-    const weekday = getWeekday(date);
-    return schedule.find((s) => s.weekday === weekday);
+    // JS: 0=Sunday, 1=Monday, ..., 6=Saturday
+    // Backend: 0=Monday, 1=Tuesday, ..., 6=Sunday
+    const jsWeekday = date.getDay();
+    // Map JS weekday to backend weekday
+    // JS 0 (Sunday) -> backend 6
+    // JS 1 (Monday) -> backend 0
+    // JS 2 (Tuesday) -> backend 1
+    // JS 3 (Wednesday) -> backend 2
+    // JS 4 (Thursday) -> backend 3
+    // JS 5 (Friday) -> backend 4
+    // JS 6 (Saturday) -> backend 5
+    const backendWeekday = jsWeekday === 0 ? 6 : jsWeekday - 1;
+    const sched = schedule.find((s) => s.weekday === backendWeekday);
+    return sched;
   };
 
   // Helper: get slots for a day
@@ -65,11 +77,22 @@ const PatientAppointmentCalendar = ({
 
   // Helper: is slot occupied
   const isSlotOccupied = (date, timeStr) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // Convert both date and appointment to Asia/Manila local date and time
+    const toPHDateStr = (d) => {
+      return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }); // YYYY-MM-DD
+    };
+    const toPHTimeStr = (d) => {
+      return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Manila' }); // HH:MM
+    };
+
+    const dateStr = toPHDateStr(date);
     return appointments.some((apt) => {
+      const validStatuses = ['Pending', 'Accepted'];
+      if (!validStatuses.includes(apt.status)) return false;
+
       const aptDate = new Date(apt.preferredDateTime);
-      const aptDateStr = aptDate.toISOString().split('T')[0];
-      const aptTime = String(aptDate.getHours()).padStart(2, '0') + ':' + String(aptDate.getMinutes()).padStart(2, '0');
+      const aptDateStr = toPHDateStr(aptDate);
+      const aptTime = toPHTimeStr(aptDate);
       return aptDateStr === dateStr && aptTime === timeStr;
     });
   };
@@ -363,6 +386,11 @@ const Booking = ({ patient }) => {
 
       if (response.ok) {
         setMessage('Appointment booked successfully!');
+        // Refresh appointments for calendar
+        fetch('http://localhost:3000/api/appointments')
+          .then(res => res.ok ? res.json() : [])
+          .then(setAllAppointments)
+          .catch(() => setAllAppointments([]));
         setTimeout(() => {
           closeModal();
         }, 2000);
@@ -428,11 +456,24 @@ const Booking = ({ patient }) => {
   };
 
   const handleCalendarSlotSelect = (dateObj, timeStr) => {
-    // Set appointmentData.preferredDateTime as ISO string for summary
-    const dateStr = dateObj.toISOString().split('T')[0];
+    // Use local date parts to avoid timezone shift
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const localDate = new Date(
+      dateObj.getFullYear(),
+      dateObj.getMonth(),
+      dateObj.getDate(),
+      hours,
+      minutes,
+      0,
+      0
+    );
+    // Format as 'YYYY-MM-DDTHH:mm' (local time, no Z)
+    const pad = n => String(n).padStart(2, 0);
+    const isoLocal = `${localDate.getFullYear()}-${pad(localDate.getMonth() + 1)}-${pad(localDate.getDate())}T${pad(localDate.getHours())}:${pad(localDate.getMinutes())}`;
+
     setAppointmentData(prev => ({
       ...prev,
-      preferredDateTime: `${dateStr}T${timeStr}`
+      preferredDateTime: isoLocal
     }));
     setIsCalendarModalOpen(false);
   };
@@ -599,12 +640,13 @@ const Booking = ({ patient }) => {
                       onClick={handleOpenCalendarModal}
                     >
                       {appointmentData.preferredDateTime
-                        ? new Date(appointmentData.preferredDateTime).toLocaleString('en-US', {
+                        ? new Date(appointmentData.preferredDateTime + '+08:00').toLocaleString('en-PH', {
+                            timeZone: 'Asia/Manila',
                             weekday: 'long',
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
-                            hour: '2-digit',
+                            hour: 'numeric',
                             minute: '2-digit'
                           })
                         : 'Select Date & Time'}
