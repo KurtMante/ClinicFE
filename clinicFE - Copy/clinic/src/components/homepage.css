@@ -443,28 +443,108 @@ body {
 }
 
 @media (max-width: 767px) {
-  .nav-menu {
-    display: none;
+  .nav-container {
+    height: 56px;
+    padding: 0 0.5rem;
   }
 
-  .hero-text h1 {
-    font-size: 2rem;
-  }
-
-  .hero-text p {
+  .nav-logo h2 {
     font-size: 1rem;
   }
 
-  .services-grid {
-    grid-template-columns: 1fr;
+  .hero-section {
+    min-height: 70vh;
+    padding-top: 3rem;
+    padding-bottom: 2rem;
   }
 
-  .about-image {
-    padding-left: 0;
+  .hero-content {
+    padding: 0 0.5rem;
   }
 
-  .footer-contact {
+  .clinic-hours {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .cta-button {
+    width: 100%;
+    margin: 0.5rem 0 0 0;
+    font-size: 1rem;
+    padding: 0.75rem 0;
+  }
+
+  .services-section,
+  .about-section,
+  .contact-section-main {
+    padding: 2rem 0;
+  }
+
+  .services-section h2,
+  .about-text h2,
+  .contact-section-main h2 {
+    font-size: 1.5rem;
+  }
+
+  .services-section .subtitle,
+  .about-text > p,
+  .contact-section-main .subtitle {
+    font-size: 1rem;
+  }
+
+  .service-card {
+    padding: 1rem;
+  }
+
+  .about-content {
+    gap: 1.5rem;
+  }
+
+  .doctor-image {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .contact-grid {
+    gap: 1rem;
+  }
+
+  .footer {
+    padding: 1rem 0;
+  }
+}
+
+/* Hamburger menu for mobile (optional, needs JS for toggle) */
+@media (max-width: 767px) {
+  .navbar {
+    position: static;
+  }
+  .nav-menu {
+    display: none !important;
+  }
+  .nav-hamburger {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #2563eb;
+    cursor: pointer;
+  }
+}
+
+/* Show nav-menu when active (add .active class with JS) */
+@media (max-width: 767px) {
+  .nav-menu.active {
+    display: flex !important;
     flex-direction: column;
+    position: absolute;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background: white;
+    z-index: 100;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem 0;
     gap: 0.5rem;
   }
 }

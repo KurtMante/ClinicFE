@@ -147,11 +147,12 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("patient")
-    localStorage.removeItem("rememberMe")
-    window.location.hash = ""
-    onLogout()
-    onNavigate("home")
+    localStorage.removeItem("patient");
+    localStorage.removeItem("rememberMe");
+    window.location.hash = "";
+    onLogout();
+    onNavigate("home");
+    window.location.reload(); // <-- Add this line to force a reload
   }
 
   // Doctor's Note helpers
