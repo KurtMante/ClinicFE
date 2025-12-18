@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Homepage from './components/homepage';
 import PatientRegister from './components/patient/patientRegister';
 import StaffRegister from './components/staff/staffRegister';
@@ -150,44 +151,74 @@ function App() {
   };
 
   return (
-    <div className="App">
-      {currentPage === 'home' && (
-        <Homepage 
-          onNavigate={navigateTo} 
-          onOpenLogin={openLoginModal}
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={
+            currentPage === 'home' ? (
+              <Homepage 
+                onNavigate={navigateTo} 
+                onOpenLogin={openLoginModal}
+                onOpenStaffLogin={openStaffLoginModal}
+                onOpenAdminLogin={openAdminLoginModal}
+              />
+            ) : null
+          } />
+          <Route path="/register" element={
+            currentPage === 'register' ? (
+              <PatientRegister onNavigate={navigateTo} />
+            ) : null
+          } />
+          <Route path="/staff-register" element={
+            currentPage === 'staffRegister' ? (
+              <StaffRegister onNavigate={navigateTo} />
+            ) : null
+          } />
+          <Route path="/dashboard" element={
+            currentPage === 'dashboard' ? (
+              <PatientDashboard onNavigate={navigateTo} onLogout={handleLogout} />
+            ) : null
+          } />
+          <Route path="/staff-dashboard" element={
+            currentPage === 'staffDashboard' ? (
+              <StaffDashboard onNavigate={navigateTo} onLogout={handleLogout} />
+            ) : null
+          } />
+          <Route path="/admin-dashboard" element={
+            currentPage === 'adminDashboard' ? (
+              <AdminDashboard onNavigate={navigateTo} onLogout={handleLogout} />
+            ) : null
+          } />
+          <Route path="/reset" element={
+            currentPage === 'resetPassword' ? (
+              <ResetPassword onBack={() => navigateTo('home')} />
+            ) : null
+          } />
+          <Route path="/staff/:section" element={<StaffDashboard />} />
+          <Route path="/staff" element={<Navigate to="/staff/dashboard" />} />
+        </Routes>
+
+        <LoginModal 
+          isOpen={isLoginModalOpen} 
+          onClose={closeLoginModal} 
+          onNavigate={navigateTo}
           onOpenStaffLogin={openStaffLoginModal}
           onOpenAdminLogin={openAdminLoginModal}
         />
-      )}
-      {currentPage === 'register' && <PatientRegister onNavigate={navigateTo} />}
-      {currentPage === 'staffRegister' && <StaffRegister onNavigate={navigateTo} />}
-      {currentPage === 'dashboard' && <PatientDashboard onNavigate={navigateTo} onLogout={handleLogout} />}
-      {currentPage === 'staffDashboard' && <StaffDashboard onNavigate={navigateTo} onLogout={handleLogout} />}
-      {currentPage === 'adminDashboard' && <AdminDashboard onNavigate={navigateTo} onLogout={handleLogout} />}
-      {currentPage === 'resetPassword' && (
-        <ResetPassword onBack={() => navigateTo('home')} />
-      )}
+        
+        <StaffLoginModal
+          isOpen={isStaffLoginModalOpen}
+          onClose={closeStaffLoginModal}
+          onNavigate={navigateTo}
+        />
 
-      <LoginModal 
-        isOpen={isLoginModalOpen} 
-        onClose={closeLoginModal} 
-        onNavigate={navigateTo}
-        onOpenStaffLogin={openStaffLoginModal}
-        onOpenAdminLogin={openAdminLoginModal}
-      />
-      
-      <StaffLoginModal
-        isOpen={isStaffLoginModalOpen}
-        onClose={closeStaffLoginModal}
-        onNavigate={navigateTo}
-      />
-
-      <AdminLoginModal
-        isOpen={isAdminLoginModalOpen}
-        onClose={closeAdminLoginModal}
-        onNavigate={navigateTo}
-      />
-    </div>
+        <AdminLoginModal
+          isOpen={isAdminLoginModalOpen}
+          onClose={closeAdminLoginModal}
+          onNavigate={navigateTo}
+        />
+      </div>
+    </Router>
   );
 }
 

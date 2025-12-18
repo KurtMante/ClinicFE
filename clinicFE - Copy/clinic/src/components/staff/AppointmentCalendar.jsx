@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './AppointmentCalendar.css';
 
-const AppointmentCalendar = ({ rescheduleData = null }) => {
+const AppointmentCalendar = ({ rescheduleData = null, onClearReschedule }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('day'); // 'day' or 'week'
   const [appointments, setAppointments] = useState([]);
@@ -48,6 +48,17 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
     fetchAllData();
     const interval = setInterval(fetchAllData, 30000); // Auto-refresh every 30s
     return () => clearInterval(interval);
+  }, [rescheduleData]);
+
+  // Clear reschedule mode if rescheduleData becomes null
+  useEffect(() => {
+    if (!rescheduleData) {
+      setIsRescheduleMode(false);
+      setAppointmentToReschedule(null);
+      setSelectedSlot(null);
+      setIsRescheduleConfirmModalOpen(false);
+      setMessage('');
+    }
   }, [rescheduleData]);
 
   const fetchAllData = async () => {
@@ -342,7 +353,6 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
 
     try {
       const appointmentDateTime = `${selectedSlot.date} ${selectedSlot.time}:00`;
-      
       const response = await fetch(`http://localhost:3000/api/appointments/${appointmentToReschedule.appointmentId}`, {
         method: 'PUT',
         headers: {
@@ -363,10 +373,13 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
       setIsRescheduleConfirmModalOpen(false);
       setIsRescheduleMode(false);
       setAppointmentToReschedule(null);
-      
+
       // Refresh data
       fetchAppointments();
-      
+
+      // Call parent to clear reschedule mode
+      if (onClearReschedule) onClearReschedule();
+
       // Reset after 2 seconds
       setTimeout(() => {
         setMessage('');
@@ -383,6 +396,8 @@ const AppointmentCalendar = ({ rescheduleData = null }) => {
     setSelectedSlot(null);
     setIsRescheduleConfirmModalOpen(false);
     setMessage('');
+    // Call parent to clear reschedule mode
+    if (onClearReschedule) onClearReschedule();
   };
 
   const closeSlotModal = () => {
