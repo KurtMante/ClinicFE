@@ -23,12 +23,11 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   const [acceptedAppointments, setAcceptedAppointments] = useState([]);
   const [services, setServices] = useState([]);
   const [walkInPatients, setWalkInPatients] = useState([]);
-  const [schedule, setSchedule] = useState([]); // Add this state
+  const [schedule, setSchedule] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState(null);
 
-  // Walk-in patient registration modal state
-  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  // Only keep the walk-in list modal state
   const [isWalkInListModalOpen, setIsWalkInListModalOpen] = useState(false);
   const [walkInFormData, setWalkInFormData] = useState({
     firstName: '',
@@ -50,43 +49,16 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   });
   const [walkInMessage, setWalkInMessage] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
-  const [refreshKeys, setRefreshKeys] = useState({
-    dashboard: 0,
-    calendar: 0,
-    appointments: 0,
-    schedule: 0,
-    feedback: 0,
-    messages: 0,
-    records: 0,
-    settings: 0,
-  });
-
-  const { section } = useParams();
-  const navigate = useNavigate();
-
-  const refreshSection = useCallback((section) => {
-    setRefreshKeys(prev => ({
-      ...prev,
-      [section]: prev[section] + 1
-    }));
-  }, []);
-
-  // Sync section from URL param
-  useEffect(() => {
-    setActiveSection(section || 'dashboard');
-  }, [section]);
 
   useEffect(() => {
     const staffData = localStorage.getItem('staff');
     const rememberMeStaff = localStorage.getItem('rememberMeStaff');
-    
     if (staffData) {
       try {
         const parsedData = JSON.parse(staffData);
         setStaff(parsedData);
       } catch (error) {
         console.error('Error parsing staff data:', error);
-        // Only clear data and redirect if remember me is not set
         if (rememberMeStaff !== 'true') {
           localStorage.removeItem('staff');
           localStorage.removeItem('rememberMeStaff');
@@ -94,7 +66,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         }
       }
     } else {
-      // Only redirect to home if remember me is not set
       if (rememberMeStaff !== 'true') {
         onNavigate('home');
       }
@@ -323,10 +294,6 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       municipality: ''
     });
     setWalkInMessage('');
-    fetchWalkInPatients();
-    fetchAppointments();
-    refreshSection('dashboard');
-    // If you want to refresh other sections, call refreshSection('appointments'), etc.
   };
 
   const handleWalkInInputChange = (e) => {
@@ -463,10 +430,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
           setWalkInMessage(`Patient registered but appointment creation failed: ${errorData.error || 'Unknown error'}. Temporary password: ${tempPassword}`);
         }
 
-        // Remove these lines (handled in closeWalkInModal)
-        // fetchWalkInPatients();
-        // fetchAppointments();
-
+        // Refresh data
+        fetchWalkInPatients();
+        fetchAppointments();
+        
         // Clear form after successful registration
         setTimeout(() => {
           closeWalkInModal();
@@ -647,8 +614,7 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                       </button>
                       <button 
                         className="register-walkin-btn"
-                        // onClick={openWalkInModal}
-                        onClick={() => handleSectionChange('calendar')}
+                        onClick={openWalkInModal}
                         title="Register Walk-in Patient"
                       >
                         + Add Patient
@@ -720,26 +686,15 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
         <div className="modal-overlay" onClick={closeWalkInListModal}>
           <div className="walkin-list-modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={closeWalkInListModal}>×</button>
-            
             <div className="modal-header">
               <h3>Walk-in Patients</h3>
               <p>Total walk-in patients: {walkInPatients.length}</p>
             </div>
-
             <div className="modal-body">
               {walkInPatients.length === 0 ? (
                 <div className="no-patients">
                   <div className="no-patients-icon">👥</div>
                   <p>No walk-in patients found.</p>
-                  <button 
-                    className="register-walkin-btn"
-                    onClick={() => {
-                      closeWalkInListModal();
-                      openWalkInModal();
-                    }}
-                  >
-                    Register First Walk-in Patient
-                  </button>
                 </div>
               ) : (
                 <div className="patients-table-container">
@@ -773,326 +728,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                   </table>
                 </div>
               )}
-
               <div className="modal-actions">
                 <button className="action-btn close-btn" onClick={closeWalkInListModal}>
                   Close
                 </button>
-                <button 
-                  className="action-btn register-btn"
-                  onClick={() => {
-                    closeWalkInListModal();
-                    openWalkInModal();
-                  }}
-                >
-                  Add New Walk-in Patient
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Walk-in Patient Registration Modal */}
-      {isWalkInModalOpen && (
-        <div className="modal-overlay" onClick={closeWalkInModal}>
-          <div className="walkin-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeWalkInModal}>×</button>
-            
-            <div className="modal-header">
-              <h3>Register Walk-in Patient</h3>
-              <p>Register a new patient for walk-in consultation</p>
-            </div>
-
-            <div className="modal-body">
-              {walkInMessage && (
-                <div className={`message ${walkInMessage.includes('successfully') ? 'success' : 'error'}`}>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{walkInMessage}</pre>
-                </div>
-              )}
-
-              <div className="walkin-form">
-                <div className="form-section">
-                  <h4>Personal Information</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInFirstName">First Name *</label>
-                      <input
-                        type="text"
-                        id="walkInFirstName"
-                        name="firstName"
-                        value={walkInFormData.firstName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Enter first name"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInLastName">Last Name *</label>
-                      <input
-                        type="text"
-                        id="walkInLastName"
-                        name="lastName"
-                        value={walkInFormData.lastName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Enter last name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInPhone">Phone Number *</label>
-                      <input
-                        type="tel"
-                        id="walkInPhone"
-                        name="phone"
-                        value={walkInFormData.phone}
-                        onChange={handleWalkInInputChange}
-                        placeholder="09123456789"
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInDateOfBirth">Date of Birth *</label>
-                      <input
-                        type="date"
-                        id="walkInDateOfBirth"
-                        name="dateOfBirth"
-                        value={walkInFormData.dateOfBirth}
-                        onChange={handleWalkInInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="walkInEmail">Email (Optional)</label>
-                    <input
-                      type="email"
-                      id="walkInEmail"
-                      name="email"
-                      value={walkInFormData.email}
-                      onChange={handleWalkInInputChange}
-                      placeholder="patient@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Appointment Date & Time Section */}
-                <div className="form-section">
-                  <h4>📅 Appointment Schedule</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInAppointmentDate">Appointment Date *</label>
-                      <input
-                        type="date"
-                        id="walkInAppointmentDate"
-                        name="appointmentDate"
-                        value={walkInFormData.appointmentDate}
-                        onChange={handleWalkInInputChange}
-                        min={getMinDate()}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInAppointmentTime">Appointment Time *</label>
-                      <input
-                        type="time"
-                        id="walkInAppointmentTime"
-                        name="appointmentTime"
-                        value={walkInFormData.appointmentTime}
-                        onChange={handleWalkInInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {walkInFormData.appointmentDate && walkInFormData.appointmentTime && (
-                    !doctorAvailability.available ? (
-                      <div className="doctor-unavailable-message" style={{ color: 'red', marginBottom: '10px' }}>
-                        Doctor is unavailable for the selected date/time.<br />
-                        <strong>Reason:</strong> {doctorAvailability.reason}
-                      </div>
-                    ) : (
-                      <div className="appointment-preview">
-                        <span className="preview-icon">🗓️</span>
-                        <div className="preview-content">
-                          <span className="preview-label">Scheduled for:</span>
-                          <span className="preview-value">
-                            {new Date(walkInFormData.appointmentDate).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })} at {new Date(`2000-01-01T${walkInFormData.appointmentTime}`).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {/* Service Selection Section */}
-                <div className="form-section">
-                  <h4>Service Selection</h4>
-                  
-                  <div className="form-group">
-                    <label htmlFor="walkInService">Select Service *</label>
-                    <select
-                      id="walkInService"
-                      name="serviceId"
-                      value={walkInFormData.serviceId}
-                      onChange={handleWalkInInputChange}
-                      required
-                      className="service-select"
-                    >
-                      <option value="">-- Select a Service --</option>
-                      {services.map((service) => (
-                        <option key={service.serviceId} value={service.serviceId}>
-                          {service.serviceName} - ₱{service.price?.toLocaleString() || '0'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {walkInFormData.serviceId && (
-                    <div className="selected-service-info">
-                      {(() => {
-                        const selectedService = services.find(s => s.serviceId === parseInt(walkInFormData.serviceId));
-                        return selectedService ? (
-                          <>
-                            <div className="service-detail">
-                              <span className="service-icon">🩺</span>
-                              <div className="service-info">
-                                <strong>{selectedService.serviceName}</strong>
-                                <span className="service-price">Price: ₱{selectedService.price?.toLocaleString() || '0'}</span>
-                              </div>
-                            </div>
-                          </>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-
-                  <div className="form-group">
-                    <label htmlFor="walkInSymptom">Symptoms / Reason for Visit</label>
-                    <textarea
-                      id="walkInSymptom"
-                      name="symptom"
-                      value={walkInFormData.symptom}
-                      onChange={handleWalkInInputChange}
-                      placeholder="Describe the patient's symptoms or reason for visit..."
-                      rows="3"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h4>Emergency Contact</h4>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInEmergencyName">Contact Name</label>
-                      <input
-                        type="text"
-                        id="walkInEmergencyName"
-                        name="emergencyContactName"
-                        value={walkInFormData.emergencyContactName}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Emergency contact name"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInEmergencyRelationship">Relationship</label>
-                      <input
-                        type="text"
-                        id="walkInEmergencyRelationship"
-                        name="emergencyContactRelationship"
-                        value={walkInFormData.emergencyContactRelationship}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Relationship"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="walkInEmergencyPhone">Emergency Contact Phone</label>
-                    <input
-                      type="tel"
-                      id="walkInEmergencyPhone"
-                      name="emergencyContactPhone1"
-                      value={walkInFormData.emergencyContactPhone1}
-                      onChange={handleWalkInInputChange}
-                      placeholder="09123456789"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h4>Address (Optional)</h4>
-                  
-                  <div className="form-group">
-                    <label htmlFor="walkInStreetAddress">Street Address</label>
-                    <input
-                      type="text"
-                      id="walkInStreetAddress"
-                      name="streetAddress"
-                      value={walkInFormData.streetAddress}
-                      onChange={handleWalkInInputChange}
-                      placeholder="Complete street address"
-                    />
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="walkInBarangay">Barangay</label>
-                      <input
-                        type="text"
-                        id="walkInBarangay"
-                        name="barangay"
-                        value={walkInFormData.barangay}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Barangay"
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="walkInMunicipality">Municipality</label>
-                      <input
-                        type="text"
-                        id="walkInMunicipality"
-                        name="municipality"
-                        value={walkInFormData.municipality}
-                        onChange={handleWalkInInputChange}
-                        placeholder="Municipality"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                  <button className="action-btn cancel-btn" onClick={closeWalkInModal}>
-                    Cancel
-                  </button>
-                  <button 
-                    className="action-btn register-btn"
-                    onClick={handleWalkInRegistration}
-                    disabled={isRegistering}
-                  >
-                    {isRegistering ? 'Registering...' : 'Register Patient'}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
