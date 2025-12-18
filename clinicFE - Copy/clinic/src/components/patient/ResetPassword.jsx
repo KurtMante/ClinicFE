@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ResetPassword.css';
 
 // Token removed: direct (unsafe for production) password reset by email only.
 const ResetPassword = ({ onBack }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [pw1, setPw1] = useState('');
   const [pw2, setPw2] = useState('');
@@ -52,6 +54,11 @@ const ResetPassword = ({ onBack }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handler to redirect to landing page
+  const handleBack = () => {
+    window.location.href = '/';
   };
 
   return (
@@ -126,7 +133,7 @@ const ResetPassword = ({ onBack }) => {
             <button
               type="button"
               className="rp-btn rp-btn-secondary"
-              onClick={onBack}
+              onClick={handleBack}
               disabled={loading}
             >
               Back to Login
@@ -137,7 +144,7 @@ const ResetPassword = ({ onBack }) => {
         <button
           type="button"
           className="rp-btn-link"
-          onClick={onBack}
+          onClick={handleBack}
           disabled={loading}
         >
           Back
