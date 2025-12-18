@@ -128,7 +128,7 @@ const ResetPassword = ({ onBack }) => {
               className="rp-btn rp-btn-primary"
               disabled={loading || !email}
             >
-              {loading ? 'Sending…' : 'Send Reset Link'}
+              {loading ? 'Sending…' : 'Change Password'}
             </button>
             <button
               type="button"

@@ -97,7 +97,7 @@ const PatientAppointmentCalendar = ({
           </div>
         </div>
         {/* Month navigation and mini calendar */}
-        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 12 }}>
+        <div className="calendar-modal-flex" style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 220 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <button

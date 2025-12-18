@@ -318,25 +318,29 @@
 /* Modal Styles */
 .modal-overlay-modern {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 40, 30, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
 }
 
 .modal-modern {
-  background: white;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 520px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 24px 24px 18px 24px;
+  max-width: 700px;
+  min-width: 340px;
+  width: 90vw;
   max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  animation: modalSlideIn 0.3s ease-out;
+  overflow-y: auto;
+  position: relative;
+  transition: max-width 0.2s, width 0.2s;
 }
 
 @keyframes modalSlideIn {
@@ -617,5 +621,34 @@
   .filter-btn {
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal-modern {
+    min-width: unset;
+    width: 98vw;
+    max-width: 98vw;
+    padding: 12px 4px 12px 4px;
+    border-radius: 8px;
+  }
+  .modal-header-modern {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .modal-title h3 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .calendar-modal-flex {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .calendar-modal-flex > div {
+    min-width: unset !important;
+    width: 100% !important;
   }
 }

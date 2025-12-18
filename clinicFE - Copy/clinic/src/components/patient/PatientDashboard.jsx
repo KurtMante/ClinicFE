@@ -641,7 +641,6 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
                             </div>
                           </div>
                           <div className="appointment-actions">
-                            <button className="btn-confirm">Confirmed</button>
                             <button className="btn-reschedule" onClick={() => handleSectionChange("appointments")}>View</button>
                           </div>
                         </div>
