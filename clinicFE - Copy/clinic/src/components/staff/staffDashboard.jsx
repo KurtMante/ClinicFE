@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import AppointmentManagement from './AppointmentManagement';
 import AppointmentCalendar from './AppointmentCalendar';
 import DoctorSchedule from './DoctorSchedule';
@@ -49,6 +50,31 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   });
   const [walkInMessage, setWalkInMessage] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [refreshKeys, setRefreshKeys] = useState({
+    dashboard: 0,
+    calendar: 0,
+    appointments: 0,
+    schedule: 0,
+    feedback: 0,
+    messages: 0,
+    records: 0,
+    settings: 0,
+  });
+
+  const { section } = useParams();
+  const navigate = useNavigate();
+
+  const refreshSection = useCallback((section) => {
+    setRefreshKeys(prev => ({
+      ...prev,
+      [section]: prev[section] + 1
+    }));
+  }, []);
+
+  // Sync section from URL param
+  useEffect(() => {
+    setActiveSection(section || 'dashboard');
+  }, [section]);
 
   useEffect(() => {
     const staffData = localStorage.getItem('staff');
@@ -84,6 +110,13 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
   useEffect(() => {
     fetchSchedule();
   }, []);
+
+  // Only fetch dashboard data when dashboard section is shown
+  useEffect(() => {
+    if (activeSection === 'dashboard' && staff) {
+      fetchDashboardData();
+    }
+  }, [activeSection, staff, refreshKeys.dashboard]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -222,8 +255,15 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
     return { name: mostBooked[0], count: mostBooked[1] };
   };
 
+  const clearCalendarReschedule = () => {
+    setCalendarData(null);
+  };
+
   const handleSectionChange = (section, data = null) => {
-    setActiveSection(section);
+    if (activeSection === 'calendar' && section !== 'calendar') {
+      setCalendarData(null);
+    }
+    navigate(`/staff/${section}`);
     if (data) {
       setCalendarData(data);
     }
@@ -283,6 +323,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
       municipality: ''
     });
     setWalkInMessage('');
+    fetchWalkInPatients();
+    fetchAppointments();
+    refreshSection('dashboard');
+    // If you want to refresh other sections, call refreshSection('appointments'), etc.
   };
 
   const handleWalkInInputChange = (e) => {
@@ -419,10 +463,10 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
           setWalkInMessage(`Patient registered but appointment creation failed: ${errorData.error || 'Unknown error'}. Temporary password: ${tempPassword}`);
         }
 
-        // Refresh data
-        fetchWalkInPatients();
-        fetchAppointments();
-        
+        // Remove these lines (handled in closeWalkInModal)
+        // fetchWalkInPatients();
+        // fetchAppointments();
+
         // Clear form after successful registration
         setTimeout(() => {
           closeWalkInModal();
@@ -603,7 +647,8 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
                       </button>
                       <button 
                         className="register-walkin-btn"
-                        onClick={openWalkInModal}
+                        // onClick={openWalkInModal}
+                        onClick={() => handleSectionChange('calendar')}
                         title="Register Walk-in Patient"
                       >
                         + Add Patient
@@ -616,31 +661,56 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
           )}
 
           {activeSection === 'calendar' && (
-            <AppointmentCalendar rescheduleData={calendarData} />
+            <AppointmentCalendar
+              rescheduleData={calendarData}
+              refreshKey={refreshKeys.calendar}
+              onRecordAdded={() => refreshSection('calendar')}
+              onClearReschedule={clearCalendarReschedule}
+            />
           )}
 
           {activeSection === 'appointments' && (
-            <AppointmentManagement onNavigateToCalendar={handleSectionChange} />
+            <AppointmentManagement
+              onNavigateToCalendar={handleSectionChange}
+              refreshKey={refreshKeys.appointments}
+              onRecordAdded={() => refreshSection('appointments')}
+            />
           )}
 
           {activeSection === 'schedule' && (
-            <DoctorSchedule />
+            <DoctorSchedule
+              refreshKey={refreshKeys.schedule}
+              onRecordAdded={() => refreshSection('schedule')}
+            />
           )}
 
           {activeSection === 'feedback' && (
-            <FeedbackManagement />
+            <FeedbackManagement
+              refreshKey={refreshKeys.feedback}
+              onRecordAdded={() => refreshSection('feedback')}
+            />
           )}
 
           {activeSection === 'messages' && (
-            <MessagesReminders />
+            <MessagesReminders
+              refreshKey={refreshKeys.messages}
+              onRecordAdded={() => refreshSection('messages')}
+            />
           )}
 
           {activeSection === 'records' && (
-            <PatientRecords />
+            <PatientRecords
+              refreshKey={refreshKeys.records}
+              onRecordAdded={() => refreshSection('records')}
+            />
           )}
 
           {activeSection === 'settings' && (
-            <StaffProfile staff={staff} />
+            <StaffProfile
+              staff={staff}
+              refreshKey={refreshKeys.settings}
+              onRecordAdded={() => refreshSection('settings')}
+            />
           )}
         </main>
       </div>
