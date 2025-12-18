@@ -1,6 +1,230 @@
 import React, { useState, useEffect } from 'react';
 import './Booking.css';
 
+// --- PatientAppointmentCalendar: Patient-only calendar for slot picking ---
+const PatientAppointmentCalendar = ({
+  appointments,
+  services,
+  schedule,
+  onSelectSlot,
+  onClose,
+  isOpen,
+}) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Calendar grid helpers
+  const getMonthDays = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days = [];
+    // Fill blanks for first week
+    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+    // Fill days of month
+    for (let d = 1; d <= lastDay.getDate(); d++) days.push(new Date(year, month, d));
+    // Fill blanks for last week
+    while (days.length % 7 !== 0) days.push(null);
+    return days;
+  };
+
+  const isSameDay = (a, b) =>
+    a && b &&
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  // Helper: get weekday (0=Sunday)
+  const getWeekday = (date) => date.getDay();
+
+  // Helper: get schedule for a day
+  const getDaySchedule = (date) => {
+    const weekday = getWeekday(date);
+    return schedule.find((s) => s.weekday === weekday);
+  };
+
+  // Helper: get slots for a day
+  const getTimeSlots = (date) => {
+    const daySchedule = getDaySchedule(date);
+    const slots = [];
+    if (!daySchedule || daySchedule.status === 'DAY_OFF' || daySchedule.status === 'UNAVAILABLE') return slots;
+    const parseTime = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const startMins = parseTime(daySchedule.startTime);
+    const endMins = parseTime(daySchedule.endTime);
+    for (let mins = startMins; mins < endMins; mins += 60) {
+      const hours = String(Math.floor(mins / 60)).padStart(2, '0');
+      const minutes = String(mins % 60).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      slots.push({ time: timeStr, minutes: mins, date: new Date(date) });
+    }
+    return slots;
+  };
+
+  // Helper: is slot occupied
+  const isSlotOccupied = (date, timeStr) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return appointments.some((apt) => {
+      const aptDate = new Date(apt.preferredDateTime);
+      const aptDateStr = aptDate.toISOString().split('T')[0];
+      const aptTime = String(aptDate.getHours()).padStart(2, '0') + ':' + String(aptDate.getMinutes()).padStart(2, '0');
+      return aptDateStr === dateStr && aptTime === timeStr;
+    });
+  };
+
+  // Helper: get service name
+  const getServiceName = (serviceId) => {
+    const s = services.find((x) => x.serviceId === serviceId);
+    return s ? s.serviceName : '';
+  };
+
+  if (!isOpen) return null;
+
+  const today = new Date();
+
+  return (
+    <div className="modal-overlay-modern" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className="modal-modern" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 700, minWidth: 340 }}>
+        <button className="modal-close-btn" onClick={onClose}>×</button>
+        <div className="modal-header-modern" style={{ borderBottom: '1px solid #eee', marginBottom: 8 }}>
+          <div className="modal-title">
+            <h3 style={{ marginBottom: 0 }}>Select Appointment Slot</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: 15 }}>
+              {currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        {/* Month navigation and mini calendar */}
+        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', marginBottom: 12 }}>
+          <div style={{ minWidth: 220 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <button
+                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
+                style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}
+                title="Previous month"
+              >‹</button>
+              <span style={{ fontWeight: 600 }}>
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
+                style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}
+                title="Next month"
+              >›</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, fontSize: 13, color: '#888', marginBottom: 2 }}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <div key={i} style={{ textAlign: 'center', fontWeight: 500 }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {getMonthDays(currentDate).map((d, i) => (
+                <button
+                  key={i}
+                  disabled={!d}
+                  style={{
+                    height: 28,
+                    width: 28,
+                    borderRadius: '50%',
+                    border: isSameDay(d, currentDate) ? '2px solid #388e3c' : '1px solid #eee',
+                    background: isSameDay(d, today) ? '#e8f5e9' : '#fff',
+                    color: isSameDay(d, currentDate) ? '#fff' : isSameDay(d, today) ? '#388e3c' : '#333',
+                    fontWeight: isSameDay(d, currentDate) ? 700 : 400,
+                    backgroundColor: isSameDay(d, currentDate) ? '#388e3c' : isSameDay(d, today) ? '#e8f5e9' : '#fff',
+                    cursor: d ? 'pointer' : 'default',
+                    outline: 'none',
+                    margin: 0,
+                    padding: 0,
+                  }}
+                  onClick={() => d && setCurrentDate(new Date(d))}
+                  tabIndex={d ? 0 : -1}
+                >
+                  {d ? d.getDate() : ''}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                style={{
+                  background: '#f5f5f5',
+                  border: '1px solid #ccc',
+                  borderRadius: 4,
+                  padding: '2px 10px',
+                  fontSize: 13,
+                  cursor: 'pointer'
+                }}
+              >
+                Today
+              </button>
+            </div>
+            <div style={{ marginTop: 12, fontSize: 13 }}>
+              <strong>Legend:</strong>
+              <span style={{ marginLeft: 8, color: '#4caf50' }}>● Available</span>
+              <span style={{ marginLeft: 8, color: '#f44336' }}>● Booked</span>
+            </div>
+          </div>
+          {/* Slots for selected day */}
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 15 }}>
+              Available Slots
+            </div>
+            <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {(() => {
+                const slots = getTimeSlots(currentDate);
+                if (!slots.length) {
+                  const daySchedule = getDaySchedule(currentDate);
+                  if (!daySchedule) return <div style={{ color: '#888' }}>No schedule for this day.</div>;
+                  if (daySchedule.status === 'DAY_OFF') return <div style={{ color: '#f44336' }}>⛔ Doctor has a day off.</div>;
+                  if (daySchedule.status === 'UNAVAILABLE') return <div style={{ color: '#f44336' }}>⛔ Doctor is unavailable.</div>;
+                  return <div style={{ color: '#888' }}>No available slots.</div>;
+                }
+                return slots.map((slot, idx) => {
+                  const occupied = isSlotOccupied(currentDate, slot.time);
+                  return (
+                    <button
+                      key={idx}
+                      className="calendar-slot-btn"
+                      style={{
+                        background: occupied ? '#f8d7da' : '#e8f5e9',
+                        color: occupied ? '#f44336' : '#388e3c',
+                        border: occupied ? '1px solid #f44336' : '1px solid #388e3c',
+                        padding: '10px 14px',
+                        borderRadius: 6,
+                        cursor: occupied ? 'not-allowed' : 'pointer',
+                        opacity: occupied ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontWeight: 500,
+                        fontSize: 16,
+                        marginBottom: 2,
+                        transition: 'background 0.2s'
+                      }}
+                      disabled={occupied}
+                      onClick={() => !occupied && onSelectSlot(currentDate, slot.time)}
+                    >
+                      <span>
+                        {slot.time} - {String(Number(slot.time.split(':')[0]) + 1).padStart(2, '0')}:{slot.time.split(':')[1]}
+                      </span>
+                      <span style={{ fontWeight: 'bold', fontSize: 14 }}>
+                        {occupied ? 'Booked' : 'Available'}
+                      </span>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Main Booking component ---
 const Booking = ({ patient }) => {
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
@@ -10,6 +234,10 @@ const Booking = ({ patient }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allAppointments, setAllAppointments] = useState([]);
+  const [calendarServices, setCalendarServices] = useState([]);
+  const [calendarSchedule, setCalendarSchedule] = useState([]);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
   // Appointment form data
   const [appointmentData, setAppointmentData] = useState({
@@ -175,6 +403,40 @@ const Booking = ({ patient }) => {
     return '⚕️';
   };
 
+  // Fetch all appointments/services/schedule for calendar modal
+  useEffect(() => {
+    if (isCalendarModalOpen) {
+      fetch('http://localhost:3000/api/appointments')
+        .then(res => res.ok ? res.json() : [])
+        .then(setAllAppointments)
+        .catch(() => setAllAppointments([]));
+      fetch('http://localhost:3000/api/medical-services')
+        .then(res => res.ok ? res.json() : [])
+        .then(setCalendarServices)
+        .catch(() => setCalendarServices([]));
+      fetch('http://localhost:3000/api/schedule')
+        .then(res => res.ok ? res.json() : [])
+        .then(setCalendarSchedule)
+        .catch(() => setCalendarSchedule([]));
+    }
+  }, [isCalendarModalOpen]);
+
+  // Instead of datetime-local input, use calendar modal for slot selection
+  const handleOpenCalendarModal = () => {
+    setIsCalendarModalOpen(true);
+    setMessage('');
+  };
+
+  const handleCalendarSlotSelect = (dateObj, timeStr) => {
+    // Set appointmentData.preferredDateTime as ISO string for summary
+    const dateStr = dateObj.toISOString().split('T')[0];
+    setAppointmentData(prev => ({
+      ...prev,
+      preferredDateTime: `${dateStr}T${timeStr}`
+    }));
+    setIsCalendarModalOpen(false);
+  };
+
   return (
     <div className="booking-modern">
       {/* Header Section */}
@@ -323,14 +585,58 @@ const Booking = ({ patient }) => {
                     <span className="label-icon">📅</span>
                     Preferred Date & Time
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="preferredDateTime"
-                    value={appointmentData.preferredDateTime}
-                    onChange={handleInputChange}
-                    min={getMinDateTime()}
-                  />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="calendar-select-btn"
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 4,
+                        border: '1px solid #888',
+                        background: '#f5f5f5',
+                        cursor: 'pointer'
+                      }}
+                      onClick={handleOpenCalendarModal}
+                    >
+                      {appointmentData.preferredDateTime
+                        ? new Date(appointmentData.preferredDateTime).toLocaleString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'Select Date & Time'}
+                    </button>
+                    {appointmentData.preferredDateTime && (
+                      <button
+                        type="button"
+                        style={{
+                          marginLeft: 4,
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#f44336',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => setAppointmentData(prev => ({ ...prev, preferredDateTime: '' }))}
+                        title="Clear selection"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Calendar Modal for slot selection */}
+                <PatientAppointmentCalendar
+                  appointments={allAppointments}
+                  services={calendarServices}
+                  schedule={calendarSchedule}
+                  isOpen={isCalendarModalOpen}
+                  onSelectSlot={handleCalendarSlotSelect}
+                  onClose={() => setIsCalendarModalOpen(false)}
+                />
 
                 <div className="form-group-modern">
                   <label>
