@@ -14,6 +14,8 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
   const [recentActivities, setRecentActivities] = useState([])
   const [services, setServices] = useState([])
   const [upcomingAppointments, setUpcomingAppointments] = useState([])
+  const [pendingReschedules, setPendingReschedules] = useState([])
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
 
   // Doctor's Note viewer state
   const [isNoteViewerOpen, setIsNoteViewerOpen] = useState(false)
@@ -63,7 +65,8 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
 
   useEffect(() => {
     if (patient) {
-      fetchServices()
+      fetchServices();
+      fetchPatientReschedules();
     }
   }, [patient])
 
@@ -216,6 +219,41 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
       hour12: true
     })
   }
+
+  // Fetch patient's pending reschedules
+  const fetchPatientReschedules = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/reschedules/patient/${patient.patientId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const pending = (Array.isArray(data) ? data : []).filter(r => r.confirmation === 'Pending');
+        setPendingReschedules(pending);
+        setShowRescheduleModal(pending.length > 0);
+      }
+    } catch (error) {
+      setPendingReschedules([]);
+      setShowRescheduleModal(false);
+    }
+  };
+
+  // Handle patient action on reschedule (Confirm/Decline)
+  const handleRescheduleAction = async (rescheduleId, action) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/reschedules/${rescheduleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: action })
+      });
+      if (response.ok) {
+        // Remove from pending list and close modal if none left
+        const updated = pendingReschedules.filter(r => r.rescheduleId !== rescheduleId);
+        setPendingReschedules(updated);
+        if (updated.length === 0) setShowRescheduleModal(false);
+      }
+    } catch (error) {
+      // Optionally show error
+    }
+  };
 
   if (!patient) {
     return (
@@ -738,6 +776,65 @@ const PatientDashboard = ({ onNavigate, onLogout }) => {
                       {noteContent}
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reschedule Modal for Pending Reschedules */}
+          {showRescheduleModal && pendingReschedules.length > 0 && (
+            <div className="modal-overlay-modern" onClick={() => setShowRescheduleModal(false)}>
+              <div className="modal-content-modern" onClick={e => e.stopPropagation()}>
+                <div className="modal-header-modern">
+                  <h3>Appointment Reschedule Request</h3>
+                  <button className="modal-close-modern" onClick={() => setShowRescheduleModal(false)}>×</button>
+                </div>
+                <div className="modal-body-modern">
+                  {pendingReschedules.map(reschedule => (
+                    <div key={reschedule.rescheduleId} className="reschedule-request-card" style={{
+                      border: '1px solid #eee',
+                      borderRadius: 8,
+                      marginBottom: 16,
+                      padding: 12,
+                      background: '#fafbfc'
+                    }}>
+                      <div style={{ marginBottom: 6 }}>
+                        <strong>Reason:</strong> {reschedule.notes}
+                      </div>
+                      <div style={{ marginBottom: 6 }}>
+                        <strong>Requested New Schedule:</strong>
+                        <span style={{ marginLeft: 6 }}>
+                          {reschedule.preferredDateTime
+                            ? new Date(reschedule.preferredDateTime).toLocaleString('en-US')
+                            : 'See appointment details'}
+                        </span>
+                      </div>
+                      <div style={{ marginBottom: 6 }}>
+                        <strong>Status:</strong> <span style={{ color: '#ff9800' }}>{reschedule.confirmation}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className="btn-primary"
+                          style={{ background: '#4caf50', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 14px', fontWeight: 600 }}
+                          onClick={() => handleRescheduleAction(reschedule.rescheduleId, 'Confirmed')}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          style={{ background: '#f44336', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 14px', fontWeight: 600 }}
+                          onClick={() => handleRescheduleAction(reschedule.rescheduleId, 'Declined')}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ textAlign: 'right' }}>
+                    <button className="btn-secondary" style={{ marginTop: 8 }} onClick={() => setShowRescheduleModal(false)}>
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

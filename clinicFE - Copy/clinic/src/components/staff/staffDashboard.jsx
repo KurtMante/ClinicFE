@@ -7,6 +7,7 @@ import FeedbackManagement from './FeedbackManagement';
 import MessagesReminders from './MessagesReminders';
 import PatientRecords from './PatientRecords';
 import StaffProfile from './StaffProfile';
+import EmergencyReschedules from './EmergencyReschedules';
 import './StaffDashboard.css';
 
 const StaffDashboard = ({ onNavigate, onLogout }) => {
@@ -611,6 +612,12 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
             >
               Patient's Record
             </button>
+            <button
+              className={`nav-item ${activeSection === 'emergency-reschedules' ? 'active' : ''}`}
+              onClick={() => handleSectionChange('emergency-reschedules')}
+            >
+              🚨 Emergency Reschedules
+            </button>
             {/* Account Settings directly below Patient's Record */}
             <button 
               className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`}
@@ -741,6 +748,12 @@ const StaffDashboard = ({ onNavigate, onLogout }) => {
               staff={staff}
               refreshKey={refreshKeys.settings}
               onRecordAdded={() => refreshSection('settings')}
+            />
+          )}
+
+          {activeSection === 'emergency-reschedules' && (
+            <EmergencyReschedules
+              onBack={() => setActiveSection('dashboard')}
             />
           )}
         </main>

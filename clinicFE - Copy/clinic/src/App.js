@@ -5,6 +5,7 @@ import PatientRegister from './components/patient/patientRegister';
 import StaffRegister from './components/staff/staffRegister';
 import PatientDashboard from './components/patient/PatientDashboard';
 import StaffDashboard from './components/staff/staffDashboard';
+import EmergencyReschedules from './components/staff/EmergencyReschedules';
 import LoginModal from './components/patient/LoginModal';
 import StaffLoginModal from './components/staff/LoginModal';
 import AdminLoginModal from './components/admin/AdminLoginModal';
@@ -195,6 +196,7 @@ function App() {
             ) : null
           } />
           <Route path="/staff/:section" element={<StaffDashboard />} />
+          <Route path="/staff/emergency-reschedules" element={<EmergencyReschedules />} />
           <Route path="/staff" element={<Navigate to="/staff/dashboard" />} />
         </Routes>
 
