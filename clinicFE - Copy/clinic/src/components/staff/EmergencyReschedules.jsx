@@ -306,29 +306,34 @@ const EmergencyReschedules = ({ onBack }) => {
               }}
             >
               <h3 style={{ margin: '0 0 8px 0', color: '#234421', fontWeight: 600, fontSize: 16 }}>Request Emergency Reschedule</h3>
-              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center' }}>
-                <label style={{ fontWeight: 500, minWidth: 100 }}>
+              <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column' }}>
+                <label style={{ fontWeight: 500, marginBottom: 4 }}>
                   Appointment:
-                  <select
-                    name="appointmentId"
-                    value={form.appointmentId}
-                    onChange={handleAppointmentSelect}
-                    required
-                    style={{ marginLeft: 8, minWidth: 140, padding: 3, borderRadius: 4, border: '1px solid #ccc' }}
-                  >
-                    <option value="">-- Select Appointment --</option>
-                    {appointments
-                      .filter(apt => {
-                        const patient = patients.find(p => p.patientId === apt.patientId);
-                        return patient && patient.role !== 'Walkin'; // Exclude walk-ins by patient role
-                      })
-                      .map(apt => (
-                        <option key={apt.appointmentId} value={apt.appointmentId}>
-                          #{apt.appointmentId} - {patients.find(p => p.patientId === apt.patientId)?.firstName || 'Unknown'} {patients.find(p => p.patientId === apt.patientId)?.lastName || ''} ({services.find(s => s.serviceId === apt.serviceId)?.serviceName || 'Service'}) on {new Date(apt.preferredDateTime).toLocaleString()}
-                        </option>
-                      ))}
-                  </select>
                 </label>
+                <select
+                  name="appointmentId"
+                  value={form.appointmentId}
+                  onChange={handleAppointmentSelect}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: 6,
+                    borderRadius: 4,
+                    border: '1px solid #ccc'
+                  }}
+                >
+                  <option value="">-- Select Appointment --</option>
+                  {appointments
+                    .filter(apt => {
+                      const patient = patients.find(p => p.patientId === apt.patientId);
+                      return patient && patient.role !== 'Walkin'; // Exclude walk-ins by patient role
+                    })
+                    .map(apt => (
+                      <option key={apt.appointmentId} value={apt.appointmentId}>
+                        #{apt.appointmentId} - {patients.find(p => p.patientId === apt.patientId)?.firstName || 'Unknown'} {patients.find(p => p.patientId === apt.patientId)?.lastName || ''} ({services.find(s => s.serviceId === apt.serviceId)?.serviceName || 'Service'}) on {new Date(apt.preferredDateTime).toLocaleString()}
+                      </option>
+                    ))}
+                </select>
               </div>
               
               <div style={{ marginBottom: 8 }}>
