@@ -87,8 +87,10 @@ const PatientAppointmentCalendar = ({
 
     const dateStr = toPHDateStr(date);
     return appointments.some((apt) => {
+      // Only treat as occupied if not cancelled
       const validStatuses = ['Pending', 'Accepted'];
       if (!validStatuses.includes(apt.status)) return false;
+      if (apt.status === 'Cancelled' || apt.status === 'Canceled') return false;
 
       const aptDate = new Date(apt.preferredDateTime);
       const aptDateStr = toPHDateStr(aptDate);
